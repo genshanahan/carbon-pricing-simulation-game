@@ -124,7 +124,7 @@ function renderCatastropheCard(d, config) {
       <h3>Catastrophe threshold breached</h3>
       <p>
         Emissions exceeded the safe limit of <strong>${fmt(config.triggerPpm)} ppm</strong>.
-        This regime is now complete.
+        Firms can still keep producing this regime, as often happens in real-world policy.
       </p>
       <p class="catastrophe-context">${context.description}</p>
     </div>`;
@@ -226,7 +226,7 @@ function renderRegime(regime) {
   const fd = d.firms[FIRM_ID];
   const fdEff = { ...fd, cleanTech: firmCleanTechEffective(regime, fd) };
   const firm = state.firms[FIRM_ID];
-  const roundDone = d.currentRound >= config.numRounds || d.catastrophe;
+  const roundDone = d.currentRound >= config.numRounds;
   const usesClean = regimeUsesCleanTech(regime);
   const isTax = regimeUsesTax(regime);
   const isTrade = regimeUsesPermits(regime);

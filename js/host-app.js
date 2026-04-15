@@ -730,7 +730,8 @@ function renderCatastropheNotice(d, config) {
       <h3>Catastrophe threshold breached</h3>
       <p>
         Emissions exceeded the safe limit of <strong>${fmt(config.triggerPpm)} ppm</strong>.
-        This regime is now locked and moves to summary/debrief.
+        Firms may continue producing this regime, mirroring how real-world economies
+        continue operating despite overshooting climate targets.
       </p>
       <p class="catastrophe-context">${ctx.description}</p>
     </div>`;
@@ -742,7 +743,7 @@ function renderRegime(regime) {
   const d = state.regimeData[regime];
   if (!d) return '';
   const config = state.config;
-  const roundDone = d.currentRound >= config.numRounds || d.catastrophe;
+  const roundDone = d.currentRound >= config.numRounds;
   const isCaC = regimeHasCap(regime);
   const isTax = regimeUsesTax(regime);
   const isTrade = regimeUsesPermits(regime);
