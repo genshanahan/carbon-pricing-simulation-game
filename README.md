@@ -74,6 +74,7 @@ Real-time sync between devices is handled by Firebase Realtime Database (free ti
         "state": { ".write": true },
         "submissions": { ".write": true },
         "debrief": { ".write": true },
+        "cleantech": { ".write": true },
         "meta": { ".write": true }
       }
     }

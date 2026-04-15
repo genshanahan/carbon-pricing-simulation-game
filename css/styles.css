@@ -356,6 +356,12 @@ label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 0.2
 
 .calculator-box .calc-breakdown { margin-top: 0.75rem; }
 .calculator-box .calc-capital-line { color: var(--text-secondary); }
+
+.calc-round-actuals {
+  margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--border);
+}
+.calc-round-actuals p { margin-bottom: 0.35rem; font-size: 0.84rem; }
+.permit-value-explain { margin-bottom: 0.5rem; }
 .calculator-result {
   font-size: 1.1rem; font-weight: 700; color: var(--accent);
   padding: 0.5rem; background: white; border-radius: 0.4rem; text-align: center; margin-top: 0.5rem;

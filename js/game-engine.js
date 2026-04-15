@@ -14,6 +14,8 @@ export const DEFAULTS = {
   triggerPpm: 450,
   taxRate: 0.80,
   cleanTechCost: 200,
+  /** Max firms that can have clean tech (student claims + facilitator assignments). */
+  maxCleanTech: 3,
 };
 
 export const REGIMES = ['freemarket', 'cac', 'tax', 'trade', 'trademarket'];
@@ -175,6 +177,27 @@ export function totalTaxPaidByFirm(d, firmIndex, config) {
     total += p * rate;
   }
   return total;
+}
+
+/**
+ * Profit breakdown for one firm in one round (matches processRound logic).
+ * @param {'freemarket'|'cac'|'tax'|'trade'|'trademarket'} regime
+ */
+export function roundProfitDetailForFirm(regime, config, fd, productionQty) {
+  const p = Math.max(0, productionQty || 0);
+  const cost = p * config.costPerUnit;
+  const revenue = p * config.revenuePerUnit;
+  let tax = 0;
+  let setup = 0;
+  if (regime === 'tax') {
+    const rate = fd.cleanTech ? config.taxRate / 2 : config.taxRate;
+    tax = p * rate;
+  }
+  if ((regime === 'tax' || regime === 'trade' || regime === 'trademarket') && fd.cleanTech && p > 0) {
+    setup = config.cleanTechCost;
+  }
+  const profit = revenue - cost - tax - setup;
+  return { p, cost, revenue, tax, setup, profit };
 }
 
 export function defaultPermitsPerFirm(config) {

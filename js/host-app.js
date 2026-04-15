@@ -13,6 +13,7 @@ import {
 import {
   pushState, onStateChange, onSubmissions, clearSubmissions,
   onStudentConnections, deleteRoom, onProposals,
+  mirrorCleanTechClaim, onCleanTechClaims,
 } from './firebase-sync.js';
 
 import {
@@ -36,6 +37,8 @@ let submissionKey = null;  // tracks which regime_round the listener is bound to
 let currentProposals = {};
 let proposalUnsub = null;
 let proposalRegime = null;
+let cleantechUnsub = null;
+let cleantechKey = null;
 
 const content = document.getElementById('content');
 const navEl = document.getElementById('regimeNav');
@@ -77,6 +80,7 @@ export async function init() {
         const rd = state.regimeData[state.regime];
         if (rd && rd.debriefActive) listenForProposals(state.regime);
       }
+      listenForCleanTechClaims();
       render();
     } catch (err) {
       console.error(err);
@@ -144,8 +148,13 @@ window.hostApp = {
     sync();
   },
 
-  setCleanTech(regime, i, val) {
+  async setCleanTech(regime, i, val) {
     state.regimeData[regime].firms[i].cleanTech = val;
+    try {
+      await mirrorCleanTechClaim(ROOM, regime, i, val);
+    } catch (e) {
+      console.error('[HOST] mirrorCleanTechClaim failed', e);
+    }
     sync();
   },
 
@@ -249,6 +258,36 @@ function listenForSubmissions() {
 }
 
 /* ── Proposal listener ── */
+
+function listenForCleanTechClaims() {
+  if (!state || !REGIMES.includes(state.regime)) {
+    if (cleantechUnsub) { cleantechUnsub(); cleantechUnsub = null; cleantechKey = null; }
+    return;
+  }
+  const regime = state.regime;
+  const d = state.regimeData[regime];
+  if (!regimeUsesCleanTech(regime) || !d || d.currentRound !== 0 || d.rounds.length > 0) {
+    if (cleantechUnsub) { cleantechUnsub(); cleantechUnsub = null; cleantechKey = null; }
+    return;
+  }
+  if (cleantechKey === regime && cleantechUnsub) return;
+  if (cleantechUnsub) { cleantechUnsub(); cleantechUnsub = null; }
+  cleantechKey = regime;
+  cleantechUnsub = onCleanTechClaims(ROOM, regime, claims => {
+    if (!state || state.regime !== regime || !state.regimeData[regime]) return;
+    const rd = state.regimeData[regime];
+    const c = claims && typeof claims === 'object' ? claims : {};
+    let changed = false;
+    for (let i = 0; i < state.config.numFirms; i++) {
+      const v = !!c[String(i)];
+      if (rd.firms[i].cleanTech !== v) {
+        rd.firms[i].cleanTech = v;
+        changed = true;
+      }
+    }
+    if (changed) sync();
+  });
+}
 
 function listenForProposals(regime) {
   if (proposalRegime === regime) return;
@@ -406,12 +445,15 @@ function renderRegime(regime) {
 /* ── Clean tech assignment ── */
 
 function renderCleanTechAssignment(regime, d) {
+  const maxSlots = state.config.maxCleanTech ?? 3;
+  const slotsUsed = d.firms.filter(f => f.cleanTech).length;
   return `
     <div class="card">
       <h3>Clean Technology Assignment</h3>
       <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:0.6rem;">
-        Select which firms have access to clean production technology (halves emissions per unit,
-        costs ${fmtMoney(state.config.cleanTechCost)} setup per round).
+        Up to <strong>${maxSlots}</strong> firms may have clean production technology (first-come on student devices, or assign here).
+        Halves emissions per unit; costs ${fmtMoney(state.config.cleanTechCost)} setup per round when producing.
+        <strong>${slotsUsed}</strong> of <strong>${maxSlots}</strong> slots in use.
       </p>
       <div class="prod-grid">
         ${state.firms.map((f, i) => {

@@ -5,10 +5,14 @@
 import {
   REGIMES, REGIME_LABELS, buildConfig, maxAllowedProduction, unitsPerPermit,
   permitsRemaining, normalizeStateFromRemote, maxAffordable, maxProductionFromPermits,
-  totalTaxPaidByFirm,
+  totalTaxPaidByFirm, roundProfitDetailForFirm, computeDeadweightLoss,
 } from './game-engine.js';
-import { onStateChange, submitDecision, registerStudent, submitProposal } from './firebase-sync.js';
-import { fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge, regimeUsesCleanTech, regimeUsesTax, regimeUsesPermits, regimeHasCap, regimeHasPermitMarket, regimeDescription, debriefPrompt, ppmContext } from './ui-helpers.js';
+import { onStateChange, submitDecision, registerStudent, submitProposal, claimCleanTech } from './firebase-sync.js';
+import {
+  fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge, regimeUsesCleanTech, regimeUsesTax,
+  regimeUsesPermits, regimeHasCap, regimeHasPermitMarket, regimeDescription, debriefPrompt,
+  ppmContext, dwlAnalogy,
+} from './ui-helpers.js';
 
 /* ── Globals ── */
 
@@ -48,6 +52,42 @@ function buildClampMessage(regime, fd, config, raw, applied) {
     ? 'the applicable round limit'
     : (reasons.length === 1 ? reasons[0] : reasons.join(' and '));
   return `You entered ${fmt(raw)}; your submission was recorded as ${fmt(applied)} (limited by ${joint}).`;
+}
+
+/** Student self-claim for clean tech (first-come; host mirrors via Firebase). */
+function renderCleanTechClaimCard(regime, d, fd, config) {
+  if (!regimeUsesCleanTech(regime) || d.currentRound !== 0 || d.rounds.length > 0) return '';
+  const maxSlots = config.maxCleanTech ?? 3;
+  const slotsUsed = d.firms.filter(f => f.cleanTech).length;
+  if (fd.cleanTech) {
+    return `
+      <div class="card" style="border-color:var(--success);">
+        <h3>Clean technology</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);">
+          Your firm has <strong>clean technology</strong> this regime (${slotsUsed} of ${maxSlots} slots in use).
+        </p>
+      </div>`;
+  }
+  if (slotsUsed >= maxSlots) {
+    return `
+      <div class="card">
+        <h3>Clean technology</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);">
+          All <strong>${maxSlots}</strong> clean-tech slots are taken. You are on <strong>standard</strong> technology for this regime.
+        </p>
+      </div>`;
+  }
+  return `
+    <div class="card">
+      <h3>Clean technology</h3>
+      <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:0.6rem;">
+        <strong>${slotsUsed}</strong> of <strong>${maxSlots}</strong> firms have clean tech (halves emissions per unit; ${fmtMoney(config.cleanTechCost)} setup per round when you produce).
+        Tap below to claim a slot &mdash; first come, first served.
+      </p>
+      <button type="button" class="btn btn-primary btn-block" onclick="window.playApp.tryClaimCleanTech('${regime}')">
+        Claim clean technology
+      </button>
+    </div>`;
 }
 
 const content = document.getElementById('content');
@@ -142,8 +182,11 @@ function renderRegime(regime) {
       </div>`;
   }
 
-  if (!roundDone) ensureCalcSim(regime, fd, d.currentRound);
-  html += renderCalculator(regime, fd, config);
+  if (!roundDone) {
+    ensureCalcSim(regime, fd, d.currentRound);
+    html += renderCleanTechClaimCard(regime, d, fd, config);
+  }
+  html += renderCalculator(regime, fd, config, d);
 
   if (!roundDone) {
     const roundKey = `${regime}_${d.currentRound}`;
@@ -209,58 +252,86 @@ function renderCleanTechSimToggle(regime, fd) {
     </div>`;
 }
 
-function renderProfitBreakdown(regime, config, fd) {
+function formatRoundProfitLine(regime, config, fd, ri, detail) {
+  const rLabel = `Round ${ri + 1}`;
+  const { p, cost, revenue, tax, setup, profit } = detail;
+  if (p <= 0) {
+    return `<p><strong>${rLabel}:</strong> 0 units produced &rarr; ${fmtMoney(0)} profit.</p>`;
+  }
+  if (regime === 'freemarket' || regime === 'cac') {
+    return `<p><strong>${rLabel}:</strong> ${fmt(p)} units &times; ${fmtMoney(config.profitPerUnit)}/unit
+      (${fmtMoney(revenue)} revenue &minus; ${fmtMoney(cost)} cost) = <strong>${fmtMoney(profit)}</strong>.</p>`;
+  }
+  if (regime === 'tax') {
+    const rate = fd.cleanTech ? config.taxRate / 2 : config.taxRate;
+    const taxBit = `${fmtMoney(tax)} tax (${fmt(p)} &times; ${fmtMoney(rate)}/unit)`;
+    const setupBit = setup > 0 ? ` &minus; ${fmtMoney(setup)} clean-tech setup` : '';
+    return `<p><strong>${rLabel}:</strong> ${fmtMoney(revenue)} revenue &minus; ${fmtMoney(cost)} cost &minus; ${taxBit}${setupBit} = <strong>${fmtMoney(profit)}</strong>.</p>`;
+  }
+  /* trade / trademarket */
+  const setupBit = setup > 0 ? ` &minus; ${fmtMoney(setup)} clean-tech setup` : '';
+  return `<p><strong>${rLabel}:</strong> ${fmtMoney(revenue)} revenue &minus; ${fmtMoney(cost)} cost${setupBit} = <strong>${fmtMoney(profit)}</strong> (${fmt(p)} units).</p>`;
+}
+
+function renderProfitBreakdown(regime, config, fd, d) {
   const rev = fmtMoney(config.revenuePerUnit);
   const cost = fmtMoney(config.costPerUnit);
   const pp = fmtMoney(config.profitPerUnit);
   const tr = fmtMoney(config.taxRate);
   const trHalf = fmtMoney(config.taxRate / 2);
-  const setup = fmtMoney(config.cleanTechCost);
+  const setupM = fmtMoney(config.cleanTechCost);
 
+  const rounds = Array.isArray(d.rounds) ? d.rounds : [];
+  const roundLines = rounds.map((r, ri) => {
+    const p = (r.production && r.production[FIRM_ID]) || 0;
+    const detail = roundProfitDetailForFirm(regime, config, fd, p);
+    return formatRoundProfitLine(regime, config, fd, ri, detail);
+  }).join('');
+
+  let summary = '';
   if (regime === 'freemarket' || regime === 'cac') {
-    return `
-      <details class="facilitator-notes calc-breakdown">
-        <summary>How profit is calculated</summary>
-        <div class="fn-body">
-          <p><strong>Per unit:</strong> revenue ${rev} &minus; cost ${cost} = profit ${pp}.</p>
-          <p><strong>Round profit:</strong> ${pp} &times; (units produced).</p>
-          ${regime === 'cac' ? `<p><strong>Cap:</strong> you cannot produce more than ${fmt(config.cacCap)} units per round.</p>` : ''}
-        </div>
-      </details>`;
+    summary = `<p><strong>Rule:</strong> revenue ${rev} &minus; cost ${cost} = ${pp} profit per unit; round profit = ${pp} &times; units produced.</p>`;
+    if (regime === 'cac') summary += `<p><strong>Cap:</strong> at most ${fmt(config.cacCap)} units per round.</p>`;
+  } else if (regime === 'tax') {
+    summary = `<p><strong>Rule:</strong> standard tax ${tr}/unit; clean tech ${trHalf}/unit plus ${setupM} setup each round you produce.</p>`;
+  } else {
+    summary = `<p><strong>Rule:</strong> ${rev} &minus; ${cost} = ${pp} per unit; clean-tech setup ${setupM} per round when producing if you have clean tech.</p>`;
+    if (regime === 'trademarket') summary += `<p><strong>Trading:</strong> permit sales/purchases adjust your cash and profit totals.</p>`;
   }
 
-  if (regime === 'tax') {
-    return `
-      <details class="facilitator-notes calc-breakdown">
-        <summary>How profit is calculated (carbon tax)</summary>
-        <div class="fn-body">
-          <p><strong>Standard firm:</strong> tax per unit = ${tr}. Profit per unit = ${pp} &minus; ${tr} = ${fmtMoney(config.profitPerUnit - config.taxRate)}. No clean-tech setup fee.</p>
-          <p><strong>Clean-tech firm:</strong> tax per unit = ${trHalf} (half emissions). Profit per unit before setup = ${fmtMoney(config.profitPerUnit - config.taxRate / 2)}. You also pay <strong>${setup}</strong> clean-tech setup <em>each round</em> you produce.</p>
-          <p><strong>Round profit:</strong> (profit per unit &times; units) &minus; tax on those units &minus; setup (if clean tech and producing).</p>
-        </div>
-      </details>`;
-  }
+  const actualBlock = rounds.length
+    ? `<div class="calc-round-actuals"><strong>Your completed rounds</strong>${roundLines}</div>`
+    : `<p><em>No rounds completed yet in this regime.</em></p>`;
 
-  if (regime === 'trade' || regime === 'trademarket') {
-    return `
-      <details class="facilitator-notes calc-breakdown">
-        <summary>How profit is calculated (permits)</summary>
-        <div class="fn-body">
-          <p><strong>Per unit:</strong> revenue ${rev} &minus; cost ${cost} = operating profit ${pp} per thingamabob (before permit constraint).</p>
-          <p><strong>Permits:</strong> standard firms produce up to <strong>1,000</strong> units per permit; clean-tech firms up to <strong>2,000</strong> units per permit. You cannot produce more than your remaining permit capacity.</p>
-          <p><strong>Clean-tech setup:</strong> if you have clean tech and produce in a round, you pay <strong>${setup}</strong> that round.</p>
-          ${regime === 'trademarket' ? '<p><strong>Trading:</strong> buying or selling permits moves cash between firms; those transfers are part of each firm\'s profit total.</p>' : ''}
-        </div>
-      </details>`;
-  }
-
-  return '';
+  return `
+    <details class="facilitator-notes calc-breakdown">
+      <summary>How profit is calculated</summary>
+      <div class="fn-body">
+        ${summary}
+        ${actualBlock}
+      </div>
+    </details>`;
 }
 
-function renderCalculator(regime, fd, config) {
+function renderPermitValueExplain(config, simClean) {
+  const upp = simClean ? 2000 : 1000;
+  const setup = simClean ? config.cleanTechCost : 0;
+  const gross = upp * config.profitPerUnit;
+  const net = gross - setup;
+  const setupPhrase = setup > 0 ? ` minus ${fmtMoney(setup)} clean-tech setup (if you produce that round)` : '';
+  return `
+    <div class="permit-value-explain info-box accent" style="font-size:0.82rem;margin-top:0.65rem;">
+      <strong>How permit value is calculated</strong> (matches the production simulator: ${simClean ? 'clean tech' : 'standard'}):
+      each permit covers <strong>${fmt(upp)}</strong> units at ${fmtMoney(config.profitPerUnit)}/unit operating profit
+      = ${fmtMoney(gross)}${setupPhrase} &rarr; <strong>${fmtMoney(net)}</strong> value from using one permit for production.
+      Compare that to the market price when deciding to buy or sell.
+    </div>`;
+}
+
+function renderCalculator(regime, fd, config, d) {
   const capLine = `<div class="calc-capital-line" style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Available capital: ${fmtMoney(fd.capital)}</div>`;
   const simToggle = renderCleanTechSimToggle(regime, fd);
-  const breakdown = renderProfitBreakdown(regime, config, fd);
+  const breakdown = renderProfitBreakdown(regime, config, fd, d);
 
   if (regime === 'freemarket' || regime === 'cac') {
     return `
@@ -304,8 +375,12 @@ function renderCalculator(regime, fd, config) {
     let tradeCalc = '';
     if (regime === 'trademarket') {
       tradeCalc = `
+        ${renderPermitValueExplain(config, calcSimCleanTech)}
         <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #d4e6f1;">
           <h3 style="font-size:0.88rem;">Trade Calculator</h3>
+          <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.45rem;">
+            Uses your <strong>assigned</strong> clean-tech status (${fd.cleanTech ? 'clean tech' : 'standard'}), not the simulator toggle above.
+          </p>
           <label>Price per permit ($):</label>
           <input type="number" id="tradeCalcPrice" min="0" value="0" oninput="window.playApp.updateTradeCalc()" style="width:100%;margin-bottom:0.4rem;">
           <div class="calculator-result" id="tradeCalcResult">Enter a price above</div>
@@ -382,6 +457,24 @@ function renderFirmSummary(regime, d, fd) {
     const unused = permitsRemaining(fd);
     extraRows += `<div class="stat-row"><span class="stat-label">Unused permits at end</span><span class="stat-value">${fmt(unused)}</span></div>`;
   }
+
+  let dwlHtml = '';
+  let dwlAnalogHtml = '';
+  if (regime !== 'freemarket') {
+    const dwl = computeDeadweightLoss(state, regime);
+    const totalIndustryProfit = d.firms.reduce((s, f) => s + f.totalProfit, 0);
+    dwlHtml = `
+      <div class="dwl-box">
+        <div class="dwl-label">Deadweight loss (vs. free market)</div>
+        <div class="dwl-value">${fmtMoney(dwl)}</div>
+        <div class="dwl-label">Excess cost of this regime's constraints (whole industry)</div>
+      </div>`;
+    const analog = dwlAnalogy(dwl, totalIndustryProfit);
+    if (analog) {
+      dwlAnalogHtml = `<div class="dwl-analogy-box"><p>${analog}</p></div>`;
+    }
+  }
+
   return `
     <div class="card" style="border-color:${firmColor(FIRM_ID)};">
       <h3>Your Results: ${REGIME_LABELS[regime]}</h3>
@@ -391,6 +484,8 @@ function renderFirmSummary(regime, d, fd) {
       ${extraRows}
       <div class="stat-row"><span class="stat-label">Catastrophe?</span><span class="stat-value">${d.catastrophe ? '\ud83d\udca5 YES' : '\u2705 No'}</span></div>
     </div>
+    ${dwlHtml}
+    ${dwlAnalogHtml}
     <div class="ppm-context-box" style="border-color:${ppmCtx.colour};">
       <div class="ppm-context-level" style="color:${ppmCtx.colour};">${ppmCtx.level}</div>
       <p>${ppmCtx.description}</p>
@@ -516,21 +611,47 @@ window.playApp = {
     const price = parseFloat(input.value) || 0;
     const regime = state.regime;
     const config = state.config;
-    const simClean = calcSimCleanTech;
-    const upp = simClean ? 2000 : 1000;
-    const setup = simClean ? config.cleanTechCost : 0;
+    const fd = state.regimeData[regime].firms[FIRM_ID];
+    const actualClean = !!fd.cleanTech;
+    const upp = actualClean ? 2000 : 1000;
+    const setup = actualClean ? config.cleanTechCost : 0;
     const permitValue = (upp * config.profitPerUnit) - setup;
+    const cannotAffordProduction = maxAffordable(fd, config) === 0;
 
     if (price <= 0) { result.textContent = 'Enter a price above'; return; }
 
     const gainFromSelling = price - permitValue;
     const gainFromBuying = permitValue - price;
 
+    let capitalNote = '';
+    if (cannotAffordProduction) {
+      capitalNote = `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.4rem 0;">
+        You cannot afford production at ${fmtMoney(config.costPerUnit)}/unit with your current capital, so using the permit for output is not an option right now.
+        Selling still brings in <strong>${fmtMoney(price)}</strong> in cash (the sale price).
+      </p>`;
+    }
+
     result.innerHTML = `
-      Permit value to you: <strong>${fmtMoney(permitValue)}</strong><br>
-      If you <strong>sell</strong> at ${fmtMoney(price)}: ${gainFromSelling >= 0 ? 'gain' : 'loss'} of <strong>${fmtMoney(Math.abs(gainFromSelling))}</strong><br>
-      If you <strong>buy</strong> at ${fmtMoney(price)}: ${gainFromBuying >= 0 ? 'gain' : 'loss'} of <strong>${fmtMoney(Math.abs(gainFromBuying))}</strong>
+      Permit value (production basis, your assignment): <strong>${fmtMoney(permitValue)}</strong>
+      (${fmt(upp)} units &times; ${fmtMoney(config.profitPerUnit)}/unit${actualClean ? ` &minus; ${fmtMoney(setup)} clean-tech setup` : ''}).
+      ${capitalNote}
+      If you <strong>sell</strong> at ${fmtMoney(price)} vs that production baseline: ${gainFromSelling >= 0 ? 'gain' : 'loss'} of <strong>${fmtMoney(Math.abs(gainFromSelling))}</strong>.<br>
+      If you <strong>buy</strong> at ${fmtMoney(price)}: ${gainFromBuying >= 0 ? 'gain' : 'loss'} of <strong>${fmtMoney(Math.abs(gainFromBuying))}</strong> vs that baseline.
     `;
+  },
+
+  async tryClaimCleanTech(regime) {
+    if (!state) return;
+    const maxSlots = state.config.maxCleanTech ?? 3;
+    try {
+      const { ok } = await claimCleanTech(ROOM, regime, FIRM_ID, maxSlots);
+      if (!ok) {
+        alert('All clean-tech slots are full. Another firm may have claimed just before you.');
+      }
+    } catch (e) {
+      console.error('[STUDENT] claimCleanTech failed', e);
+      alert('Could not claim clean tech. Check your connection.\n\n' + (e.message || String(e)));
+    }
   },
 
   async submitProposal(regime) {
