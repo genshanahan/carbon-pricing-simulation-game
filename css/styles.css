@@ -297,6 +297,39 @@ label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 0.2
 }
 .submission-status.pending { background: #fef5e7; color: var(--warn); border: 1px solid #f9e2b0; }
 .submission-status.received { background: #eafaf1; color: var(--success); border: 1px solid #a9dfbf; }
+.sub-cell-note {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.form-error {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.4rem;
+  border: 1px solid #f5c6cb;
+  background: #fdf2f2;
+  color: #a94442;
+  font-size: 0.82rem;
+}
+
+.industry-totals-card {
+  border-left: 4px solid var(--accent);
+}
+
+.catastrophe-overlay {
+  border: 2px solid var(--danger);
+  background: #fff3f0;
+}
+.catastrophe-overlay h3 {
+  color: var(--danger);
+  margin-bottom: 0.4rem;
+}
+.catastrophe-overlay .catastrophe-context {
+  margin-top: 0.4rem;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
 
 /* ── Facilitator notes (collapsible) ── */
 
@@ -444,6 +477,14 @@ label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 0.2
   padding: 0.6rem; margin-bottom: 0.75rem;
 }
 .submit-section .btn { font-size: 1rem; padding: 0.7rem 2rem; }
+.submit-section.submission-confirmed {
+  animation: submissionPulse 0.9s ease;
+}
+@keyframes submissionPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 158, 115, 0.5); }
+  40% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(0, 158, 115, 0.12); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 158, 115, 0); }
+}
 
 .waiting-indicator {
   text-align: center; padding: 2rem 1rem; color: var(--text-secondary);

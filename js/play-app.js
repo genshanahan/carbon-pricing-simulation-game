@@ -27,6 +27,8 @@ let state = null;
 let hasSubmitted = {};
 let submissionClampNotes = {};
 let hasProposed = {};
+let submissionErrors = {};
+let submissionRecentlySaved = {};
 
 /** RTDB `cleantech/{regime}` snapshot (students listen here; host also mirrors into `state`). */
 const cleantechRemoteByRegime = {};
@@ -105,6 +107,27 @@ function buildClampMessage(regime, fd, config, raw, applied) {
     ? 'the applicable round limit'
     : (reasons.length === 1 ? reasons[0] : reasons.join(' and '));
   return `You entered ${fmt(raw)}; your submission was recorded as ${fmt(applied)} (limited by ${joint}).`;
+}
+
+function parseWholeNumber(raw) {
+  if (raw == null) return null;
+  const text = String(raw).trim();
+  if (!/^\d+$/.test(text)) return null;
+  return parseInt(text, 10);
+}
+
+function renderCatastropheCard(d, config) {
+  if (!d.catastrophe) return '';
+  const context = ppmContext(d.ppm);
+  return `
+    <div class="catastrophe-overlay card" role="alert" aria-live="assertive">
+      <h3>Catastrophe threshold breached</h3>
+      <p>
+        Emissions exceeded the safe limit of <strong>${fmt(config.triggerPpm)} ppm</strong>.
+        This regime is now complete.
+      </p>
+      <p class="catastrophe-context">${context.description}</p>
+    </div>`;
 }
 
 /** Student self-claim for clean tech (first-come; host mirrors via Firebase). */
@@ -203,7 +226,7 @@ function renderRegime(regime) {
   const fd = d.firms[FIRM_ID];
   const fdEff = { ...fd, cleanTech: firmCleanTechEffective(regime, fd) };
   const firm = state.firms[FIRM_ID];
-  const roundDone = d.currentRound >= config.numRounds;
+  const roundDone = d.currentRound >= config.numRounds || d.catastrophe;
   const usesClean = regimeUsesCleanTech(regime);
   const isTax = regimeUsesTax(regime);
   const isTrade = regimeUsesPermits(regime);
@@ -228,6 +251,7 @@ function renderRegime(regime) {
   `;
 
   html += renderCO2Meter(d.ppm, config);
+  html += renderCatastropheCard(d, config);
 
   if (isTrade) {
     const pr = permitsRemaining(fdEff);
@@ -253,10 +277,12 @@ function renderRegime(regime) {
     const alreadySubmitted = hasSubmitted[roundKey];
     const maxAllowed = maxAllowedProduction(fdEff, config, regime);
     const clampNote = submissionClampNotes[roundKey] || '';
+    const submissionError = submissionErrors[roundKey] || '';
+    const animateClass = submissionRecentlySaved[roundKey] ? ' submission-confirmed' : '';
 
     if (alreadySubmitted) {
       html += `
-        <div class="submit-section" style="border-color:var(--success);">
+        <div class="submit-section${animateClass}" style="border-color:var(--success);">
           <h3 style="color:var(--success);">Decision submitted!</h3>
           <p style="font-size:0.88rem;color:var(--text-secondary);">
             You submitted <strong>${fmt(alreadySubmitted)}</strong> thingamabobs for Round ${d.currentRound + 1}.
@@ -273,7 +299,8 @@ function renderRegime(regime) {
             ${isCaC ? `(Cap: ${fmt(config.cacCap)})` : ''}
             (Max: ${fmt(maxAllowed)})
           </p>
-          <input type="number" id="studentProd" min="0" max="${maxAllowed}" value="0">
+          <input type="number" id="studentProd" min="0" max="${maxAllowed}" value="0" step="1" inputmode="numeric" pattern="[0-9]*">
+          ${submissionError ? `<div class="form-error mt-1">${submissionError}</div>` : ''}
           <br>
           <button class="btn btn-success" onclick="window.playApp.submitProd('${regime}', ${d.currentRound}, ${maxAllowed})">
             Submit Decision
@@ -399,7 +426,7 @@ function renderCalculator(regime, fd, config, d) {
         <h3>Profit Calculator</h3>
         ${capLine}
         <label>Planned production:</label>
-        <input type="number" id="calcInput" min="0" value="0" oninput="window.playApp.updateCalc('${regime}')" style="width:100%;margin-bottom:0.4rem;">
+        <input type="number" id="calcInput" min="0" value="0" oninput="window.playApp.updateCalc('${regime}')" style="width:100%;margin-bottom:0.4rem;" step="1" inputmode="numeric" pattern="[0-9]*">
         <div class="calculator-result" id="calcResult">Enter a number above</div>
         ${breakdown}
       </div>`;
@@ -421,7 +448,7 @@ function renderCalculator(regime, fd, config, d) {
           ${sim ? ` | Setup: ${fmtMoney(setupPerRound)}/round` : ''}
         </div>
         <label>Planned production:</label>
-        <input type="number" id="calcInput" min="0" value="0" oninput="window.playApp.updateCalc('${regime}')" style="width:100%;margin-bottom:0.4rem;">
+        <input type="number" id="calcInput" min="0" value="0" oninput="window.playApp.updateCalc('${regime}')" style="width:100%;margin-bottom:0.4rem;" step="1" inputmode="numeric" pattern="[0-9]*">
         <div class="calculator-result" id="calcResult">Enter a number above</div>
         ${breakdown}
       </div>`;
@@ -442,7 +469,7 @@ function renderCalculator(regime, fd, config, d) {
             Uses your <strong>assigned</strong> clean-tech status (${fd.cleanTech ? 'clean tech' : 'standard'}), not the simulator toggle above.
           </p>
           <label>Price per permit ($):</label>
-          <input type="number" id="tradeCalcPrice" min="0" value="0" oninput="window.playApp.updateTradeCalc()" style="width:100%;margin-bottom:0.4rem;">
+          <input type="number" id="tradeCalcPrice" min="0" value="0" oninput="window.playApp.updateTradeCalc()" style="width:100%;margin-bottom:0.4rem;" step="1" inputmode="numeric" pattern="[0-9]*">
           <div class="calculator-result" id="tradeCalcResult">Enter a price above</div>
         </div>`;
     }
@@ -457,7 +484,7 @@ function renderCalculator(regime, fd, config, d) {
           ${sim ? ` | Setup: ${fmtMoney(setupPerRound)}/round` : ''}
         </div>
         <label>Planned production:</label>
-        <input type="number" id="calcInput" min="0" value="0" oninput="window.playApp.updateCalc('${regime}')" style="width:100%;margin-bottom:0.4rem;">
+        <input type="number" id="calcInput" min="0" value="0" oninput="window.playApp.updateCalc('${regime}')" style="width:100%;margin-bottom:0.4rem;" step="1" inputmode="numeric" pattern="[0-9]*">
         <div class="calculator-result" id="calcResult">Enter a number above</div>
         ${tradeCalc}
         ${breakdown}
@@ -739,12 +766,19 @@ window.playApp = {
   async submitProd(regime, round, maxAllowed) {
     const input = document.getElementById('studentProd');
     if (!input || !state) return;
-    const raw = Math.max(0, parseInt(input.value, 10) || 0);
+    const roundKey = `${regime}_${round}`;
+    const parsed = parseWholeNumber(input.value);
+    if (parsed == null) {
+      submissionErrors[roundKey] = 'Enter a whole non-negative number.';
+      render();
+      return;
+    }
+    const raw = Math.max(0, parsed);
+    delete submissionErrors[roundKey];
     let qty = raw;
     if (qty > maxAllowed) qty = maxAllowed;
     const rawFd = state.regimeData[regime].firms[FIRM_ID];
     const fd = { ...rawFd, cleanTech: firmCleanTechEffective(regime, rawFd) };
-    const roundKey = `${regime}_${round}`;
     const note = buildClampMessage(regime, fd, state.config, raw, qty);
     if (note) submissionClampNotes[roundKey] = note;
     else delete submissionClampNotes[roundKey];
@@ -754,7 +788,12 @@ window.playApp = {
       await submitDecision(ROOM, regime, round, FIRM_ID, qty);
       console.log(`[STUDENT] submitProd: write succeeded`);
       hasSubmitted[roundKey] = qty;
+      submissionRecentlySaved[roundKey] = true;
       render();
+      setTimeout(() => {
+        delete submissionRecentlySaved[roundKey];
+        if (state && state.regime === regime) render();
+      }, 1200);
     } catch (e) {
       console.error(`[STUDENT] submitProd: write FAILED`, e);
       alert('Could not submit. Check your connection.\n\n' + e.message);

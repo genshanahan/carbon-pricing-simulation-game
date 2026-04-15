@@ -213,6 +213,7 @@ export function initRegimeData(config, existingData) {
   return {
     currentRound: 0,
     rounds: [],
+    revealedRounds: {},
     firms: Array.from({ length: config.numFirms }, (_, i) => ({
       id: i,
       capital: config.startCapital,
@@ -245,9 +246,14 @@ export function normalizeRegimeDatum(rd, config) {
     return f && typeof f === 'object' ? { ...b, ...f } : b;
   });
 
+  const rounds = Array.isArray(rd.rounds)
+    ? rd.rounds.map(r => normalizeRoundRecord(r, config.numFirms))
+    : [];
+
   return {
     currentRound: typeof rd.currentRound === 'number' ? rd.currentRound : 0,
-    rounds: Array.isArray(rd.rounds) ? rd.rounds : [],
+    rounds,
+    revealedRounds: rd.revealedRounds && typeof rd.revealedRounds === 'object' ? rd.revealedRounds : {},
     firms,
     ppm: typeof rd.ppm === 'number' ? rd.ppm : base.ppm,
     catastrophe: typeof rd.catastrophe === 'boolean' ? rd.catastrophe : false,
@@ -255,6 +261,38 @@ export function normalizeRegimeDatum(rd, config) {
     trades: Array.isArray(rd.trades) ? rd.trades : [],
     debriefActive: typeof rd.debriefActive === 'boolean' ? rd.debriefActive : false,
     offsetInjectLog: Array.isArray(rd.offsetInjectLog) ? rd.offsetInjectLog : [],
+  };
+}
+
+function normalizeRoundRecord(round, numFirms) {
+  if (!round || typeof round !== 'object') {
+    return {
+      production: Array.from({ length: numFirms }, () => 0),
+      profitByFirm: Array.from({ length: numFirms }, () => 0),
+      capitalStart: Array.from({ length: numFirms }, () => 0),
+      totalProduction: 0,
+      totalProfit: 0,
+      capitalStartTotal: 0,
+      ppmAfter: 0,
+    };
+  }
+  const production = Array.from({ length: numFirms }, (_, i) => Number(round.production?.[i]) || 0);
+  const profitByFirm = Array.from({ length: numFirms }, (_, i) => Number(round.profitByFirm?.[i]) || 0);
+  const capitalStart = Array.from({ length: numFirms }, (_, i) => Number(round.capitalStart?.[i]) || 0);
+  return {
+    production,
+    profitByFirm,
+    capitalStart,
+    totalProduction: typeof round.totalProduction === 'number'
+      ? round.totalProduction
+      : production.reduce((s, v) => s + v, 0),
+    totalProfit: typeof round.totalProfit === 'number'
+      ? round.totalProfit
+      : profitByFirm.reduce((s, v) => s + v, 0),
+    capitalStartTotal: typeof round.capitalStartTotal === 'number'
+      ? round.capitalStartTotal
+      : capitalStart.reduce((s, v) => s + v, 0),
+    ppmAfter: typeof round.ppmAfter === 'number' ? round.ppmAfter : 0,
   };
 }
 
@@ -353,9 +391,12 @@ export function processRound(state, regime, production) {
 
   let totalPpmAdded = 0;
   let roundTaxRevenue = 0;
+  const capitalStart = [];
+  const roundProfitByFirm = [];
 
   for (let i = 0; i < config.numFirms; i++) {
     const fd = d.firms[i];
+    const capitalBefore = fd.capital;
     const p = clamped[i];
     const cost = p * config.costPerUnit;
     const revenue = p * config.revenuePerUnit;
@@ -372,6 +413,8 @@ export function processRound(state, regime, production) {
     }
 
     const profit = revenue - cost - tax - cleanSetup;
+    capitalStart.push(capitalBefore);
+    roundProfitByFirm.push(profit);
     fd.capital = fd.capital - cost + revenue - tax - cleanSetup;
     fd.totalProduced += p;
     fd.totalProfit += profit;
@@ -385,9 +428,15 @@ export function processRound(state, regime, production) {
   d.totalTaxRevenue += roundTaxRevenue;
 
   const totalProd = clamped.reduce((s, v) => s + v, 0);
+  const totalRoundProfit = roundProfitByFirm.reduce((s, v) => s + v, 0);
+  const totalCapitalStart = capitalStart.reduce((s, v) => s + v, 0);
   d.rounds.push({
     production: [...clamped],
+    profitByFirm: roundProfitByFirm,
+    capitalStart,
     totalProduction: totalProd,
+    totalProfit: totalRoundProfit,
+    capitalStartTotal: totalCapitalStart,
     ppmAfter: d.ppm,
   });
   d.currentRound++;

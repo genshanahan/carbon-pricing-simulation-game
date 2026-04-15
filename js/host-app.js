@@ -41,6 +41,8 @@ let proposalUnsub = null;
 let proposalRegime = null;
 let cleantechUnsub = null;
 let cleantechKey = null;
+let roundFormErrorsByRegime = {};
+let tradeFormErrorsByRegime = {};
 
 /**
  * RTDB `cleantech/{regime}` snapshots, keyed by regime.
@@ -75,6 +77,14 @@ function escAttr(s) {
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;');
+}
+
+function parseWholeNumberInput(raw) {
+  if (raw == null) return null;
+  const text = String(raw).trim();
+  if (text.length === 0) return null;
+  if (!/^-?\d+$/.test(text)) return null;
+  return parseInt(text, 10);
 }
 
 function mountResultsCharts() {
@@ -294,6 +304,8 @@ window.hostApp = {
     if (seq.includes(regime) && !state.regimeData[regime]) {
       state.regimeData[regime] = initRegimeData(state.config);
     }
+    delete roundFormErrorsByRegime[regime];
+    delete tradeFormErrorsByRegime[regime];
     listenForSubmissions();
     sync();
   },
@@ -332,20 +344,39 @@ window.hostApp = {
   },
 
   setPermits(regime, i, val) {
-    state.regimeData[regime].firms[i].permits = parseInt(val) || 0;
+    const parsed = parseWholeNumberInput(val);
+    state.regimeData[regime].firms[i].permits = parsed == null ? 0 : Math.max(0, parsed);
     sync();
   },
 
   async submitRound(regime) {
     const d = state.regimeData[regime];
     bakeCleanTechIntoState(regime);
+    const revealKey = String(d.currentRound);
+    if (!d.revealedRounds || !d.revealedRounds[revealKey]) {
+      roundFormErrorsByRegime[regime] = 'Reveal submissions before processing the round.';
+      render();
+      return;
+    }
     const production = [];
     for (let i = 0; i < state.config.numFirms; i++) {
       const el = document.getElementById(`prod-${regime}-${i}`);
       const fromSubmission = currentSubmissions[i];
-      let val = el ? parseInt(el.value) || 0 : (fromSubmission ? fromSubmission.quantity : 0);
+      let val;
+      if (el) {
+        const parsed = parseWholeNumberInput(el.value);
+        if (parsed == null || parsed < 0) {
+          roundFormErrorsByRegime[regime] = `Enter a whole non-negative number for ${state.firms[i].name}.`;
+          render();
+          return;
+        }
+        val = parsed;
+      } else {
+        val = fromSubmission ? Number(fromSubmission.quantity) || 0 : 0;
+      }
       production.push(val);
     }
+    delete roundFormErrorsByRegime[regime];
     const prevRound = d.currentRound;
     processRound(state, regime, production);
     const newRound = d.currentRound;
@@ -356,6 +387,15 @@ window.hostApp = {
     submissionKey = null;
     sync();
     console.log(`[HOST] submitRound: synced, submissionKey reset — listenForSubmissions will rebind on next onStateChange`);
+  },
+
+  revealSubmissions(regime) {
+    const d = state.regimeData[regime];
+    if (!d) return;
+    if (!d.revealedRounds || typeof d.revealedRounds !== 'object') d.revealedRounds = {};
+    d.revealedRounds[String(d.currentRound)] = true;
+    delete roundFormErrorsByRegime[regime];
+    sync();
   },
 
   startDebrief(regime) {
@@ -379,12 +419,30 @@ window.hostApp = {
   },
 
   recordTrade(regime) {
-    const seller = parseInt(document.getElementById('tm-seller').value);
-    const buyer = parseInt(document.getElementById('tm-buyer').value);
-    const qty = parseInt(document.getElementById('tm-qty').value) || 0;
-    const price = parseFloat(document.getElementById('tm-price').value) || 0;
+    const seller = parseWholeNumberInput(document.getElementById('tm-seller')?.value);
+    const buyer = parseWholeNumberInput(document.getElementById('tm-buyer')?.value);
+    const qtyRaw = document.getElementById('tm-qty')?.value;
+    const qty = parseWholeNumberInput(qtyRaw);
+    const priceRaw = document.getElementById('tm-price')?.value;
+    const price = Number(priceRaw);
+    if (seller == null || buyer == null) {
+      tradeFormErrorsByRegime[regime] = 'Select both a seller and a buyer.';
+      render();
+      return;
+    }
+    if (qty == null || qty <= 0) {
+      tradeFormErrorsByRegime[regime] = 'Permits traded must be a whole number of at least 1.';
+      render();
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      tradeFormErrorsByRegime[regime] = 'Price per permit must be a non-negative number.';
+      render();
+      return;
+    }
     const result = processPermitTrade(state, regime, seller, buyer, qty, price);
-    if (result.error) { alert(result.error); return; }
+    if (result.error) { tradeFormErrorsByRegime[regime] = result.error; render(); return; }
+    delete tradeFormErrorsByRegime[regime];
     sync();
   },
 
@@ -583,11 +641,11 @@ function renderSetup() {
       <div class="two-col">
         <div class="form-group">
           <label for="cfg-num-firms">Number of firms</label>
-          <input type="number" id="cfg-num-firms" min="3" max="8" value="${state.config.numFirms}">
+          <input type="number" id="cfg-num-firms" min="3" max="8" value="${state.config.numFirms}" step="1" inputmode="numeric" pattern="[0-9]*">
         </div>
         <div class="form-group">
           <label for="cfg-num-rounds">Rounds per regime</label>
-          <input type="number" id="cfg-num-rounds" min="3" max="7" value="${state.config.numRounds}">
+          <input type="number" id="cfg-num-rounds" min="3" max="7" value="${state.config.numRounds}" step="1" inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
       <fieldset class="regime-toggle-fieldset">
@@ -651,13 +709,40 @@ function renderSetup() {
     </div>`;
 }
 
+function renderIndustryTotals(regime, d, config) {
+  const totalProfit = d.firms.reduce((s, f) => s + f.totalProfit, 0);
+  const roundsRemaining = Math.max(0, config.numRounds - d.currentRound);
+  return `
+    <div class="card industry-totals-card">
+      <h3>Live Industry Totals</h3>
+      <div class="stat-row"><span class="stat-label">Regime</span><span class="stat-value">${REGIME_LABELS[regime]}</span></div>
+      <div class="stat-row"><span class="stat-label">Total industry profit</span><span class="stat-value">${fmtMoney(totalProfit)}</span></div>
+      <div class="stat-row"><span class="stat-label">Current CO\u2082 concentration</span><span class="stat-value">${fmt(d.ppm)} ppm</span></div>
+      <div class="stat-row"><span class="stat-label">Rounds remaining</span><span class="stat-value">${fmt(roundsRemaining)}</span></div>
+    </div>`;
+}
+
+function renderCatastropheNotice(d, config) {
+  if (!d.catastrophe) return '';
+  const ctx = ppmContext(d.ppm);
+  return `
+    <div class="catastrophe-overlay card" role="alert" aria-live="assertive">
+      <h3>Catastrophe threshold breached</h3>
+      <p>
+        Emissions exceeded the safe limit of <strong>${fmt(config.triggerPpm)} ppm</strong>.
+        This regime is now locked and moves to summary/debrief.
+      </p>
+      <p class="catastrophe-context">${ctx.description}</p>
+    </div>`;
+}
+
 /* ── Generic regime renderer ── */
 
 function renderRegime(regime) {
   const d = state.regimeData[regime];
   if (!d) return '';
   const config = state.config;
-  const roundDone = d.currentRound >= config.numRounds;
+  const roundDone = d.currentRound >= config.numRounds || d.catastrophe;
   const isCaC = regimeHasCap(regime);
   const isTax = regimeUsesTax(regime);
   const isTrade = regimeUsesPermits(regime);
@@ -692,6 +777,8 @@ function renderRegime(regime) {
     </div>
     ${fnotesHtml}
     ${renderCO2Meter(d.ppm, config, isTax ? `<div style="margin-top:0.4rem;font-size:0.85rem;">Tax revenue: <strong>${fmtMoney(d.totalTaxRevenue)}</strong></div>` : '')}
+    ${renderIndustryTotals(regime, d, config)}
+    ${renderCatastropheNotice(d, config)}
   `;
 
   if (usesClean && d.currentRound === 0 && d.rounds.length === 0) {
@@ -774,7 +861,8 @@ function renderPermitAllocation(regime, d, config) {
             <div class="firm-name" style="color:${firmColor(i)}">${f.name}</div>
             <label>Permits</label>
             <input type="number" min="0" value="${fd.permits}"
-                   onchange="window.hostApp.setPermits('${regime}', ${i}, this.value)">
+                   onchange="window.hostApp.setPermits('${regime}', ${i}, this.value)"
+                   step="1" inputmode="numeric" pattern="[0-9]*">
           </div>`;
         }).join('')}
       </div>
@@ -793,6 +881,7 @@ function renderPermitMarket(regime, d, config) {
   const prices = trades.map(t => t.price);
   const totalVol = trades.reduce((s, t) => s + t.quantity, 0);
   const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+  const tradeError = tradeFormErrorsByRegime[regime] || '';
 
   const holdingsRows = state.firms.map((f, i) => {
     const fd = d.firms[i];
@@ -827,9 +916,10 @@ function renderPermitMarket(regime, d, config) {
         </div>
       </div>
       <div class="two-col">
-        <div class="form-group"><label>Permits traded</label><input type="number" id="tm-qty" min="1" value="1"></div>
-        <div class="form-group"><label>Price per permit ($)</label><input type="number" id="tm-price" min="0" step="1" value="150"></div>
+        <div class="form-group"><label>Permits traded</label><input type="number" id="tm-qty" min="1" value="1" step="1" inputmode="numeric" pattern="[0-9]*"></div>
+        <div class="form-group"><label>Price per permit ($)</label><input type="number" id="tm-price" min="0" step="1" value="150" inputmode="numeric" pattern="[0-9]*"></div>
       </div>
+      ${tradeError ? `<div class="form-error">${tradeError}</div>` : ''}
       <button class="btn btn-success" onclick="window.hostApp.recordTrade('${regime}')">Record Trade</button>
 
       ${regime === 'trademarket' && config.offsetAuctionEnabled ? `
@@ -841,7 +931,7 @@ function renderPermitMarket(regime, d, config) {
         <div class="two-col" style="align-items:flex-end;">
           <div class="form-group" style="margin-bottom:0;">
             <label for="offset-permits-per-firm">Extra permits per firm</label>
-            <input type="number" id="offset-permits-per-firm" min="1" max="30" value="1">
+            <input type="number" id="offset-permits-per-firm" min="1" max="30" value="1" step="1" inputmode="numeric" pattern="[0-9]*">
           </div>
           <div style="margin-bottom:0.5rem;">
             <button type="button" class="btn btn-warn" onclick="window.hostApp.injectOffsetAuction('${regime}')">Add permits to all firms</button>
@@ -879,6 +969,9 @@ function renderProductionInput(regime, d, config) {
   const usesClean = regimeUsesCleanTech(regime);
   const roundNum = d.currentRound + 1;
   const totalSubmitted = Object.keys(currentSubmissions).length;
+  const revealKey = String(d.currentRound);
+  const submissionsRevealed = !!(d.revealedRounds && d.revealedRounds[revealKey]);
+  const roundError = roundFormErrorsByRegime[regime] || '';
 
   return `
     <div class="card">
@@ -894,7 +987,7 @@ function renderProductionInput(regime, d, config) {
           const fdEff = hasCT ? { ...fd, cleanTech: true } : fd;
           const maxAllowed = maxAllowedProduction(fdEff, config, regime);
           const sub = currentSubmissions[i];
-          const prefilledVal = sub ? sub.quantity : 0;
+          const prefilledVal = (submissionsRevealed && sub) ? sub.quantity : 0;
           const techBadge = usesClean ? cleanBadge(fdEff) : '';
           let extraInfo = `Capital: ${fmtMoney(fd.capital)}`;
           if (isCaC) extraInfo += ` | Cap: ${fmt(config.cacCap)}`;
@@ -907,11 +1000,21 @@ function renderProductionInput(regime, d, config) {
           return `<div class="prod-input-card" style="${sub ? 'border-color:var(--success);' : ''}">
             <div class="firm-name" style="color:${firmColor(i)}">${f.name} ${techBadge}</div>
             <div style="font-size:0.78rem;color:var(--text-secondary);">${extraInfo}</div>
-            ${sub ? `<span class="submission-status received">Submitted: ${fmt(sub.quantity)}</span>` : `<span class="submission-status pending">Waiting…</span>`}
+            ${sub
+              ? (submissionsRevealed
+                ? `<span class="submission-status received">Submitted: ${fmt(sub.quantity)}</span>`
+                : '<span class="submission-status received">Submitted (hidden until reveal)</span>')
+              : '<span class="submission-status pending">Waiting…</span>'}
             <input type="number" id="prod-${regime}-${i}" min="0" max="${maxAllowed}"
-                   value="${prefilledVal}" style="margin-top:0.3rem;">
+                   value="${prefilledVal}" style="margin-top:0.3rem;" step="1" inputmode="numeric" pattern="[0-9]*">
           </div>`;
         }).join('')}
+      </div>
+      ${roundError ? `<div class="form-error mt-1">${roundError}</div>` : ''}
+      <div class="mt-1">
+        <button class="btn btn-outline btn-block" onclick="window.hostApp.revealSubmissions('${regime}')">
+          ${submissionsRevealed ? 'Submissions revealed' : 'Reveal submissions'}
+        </button>
       </div>
       <div class="mt-1">
         <button class="btn btn-success btn-block" onclick="window.hostApp.submitRound('${regime}')">
@@ -925,15 +1028,38 @@ function renderProductionInput(regime, d, config) {
 
 function renderRoundHistory(regime, d) {
   const rows = d.rounds.map((r, ri) => {
-    const firmCells = state.firms.map((_, fi) => `<td class="num">${fmt(r.production[fi])}</td>`).join('');
-    return `<tr><td>R${ri + 1}</td>${firmCells}<td class="num">${fmt(r.totalProduction)}</td><td class="num">${fmt(r.ppmAfter)}</td></tr>`;
+    const firmCells = state.firms.map((_, fi) => {
+      const prod = Number(r.production?.[fi]) || 0;
+      const profit = Number(r.profitByFirm?.[fi]) || 0;
+      return `<td class="num">${fmt(prod)}<div class="sub-cell-note">${fmtMoney(profit)}</div></td>`;
+    }).join('');
+    const capitalStartTotal = typeof r.capitalStartTotal === 'number'
+      ? r.capitalStartTotal
+      : (Array.isArray(r.capitalStart) ? r.capitalStart.reduce((s, v) => s + (Number(v) || 0), 0) : 0);
+    return `<tr>
+      <td>R${ri + 1}</td>
+      <td class="num">${fmtMoney(capitalStartTotal)}</td>
+      ${firmCells}
+      <td class="num">${fmt(r.totalProduction)}</td>
+      <td class="num">${fmtMoney(typeof r.totalProfit === 'number' ? r.totalProfit : 0)}</td>
+      <td class="num">${fmt(r.ppmAfter)}</td>
+    </tr>`;
   }).join('');
 
   return `
     <div class="card">
       <h3>Production History</h3>
       <table>
-        <thead><tr><th></th>${state.firms.map(f => `<th class="num">${f.name}</th>`).join('')}<th class="num">Total</th><th class="num">CO\u2082</th></tr></thead>
+        <thead>
+          <tr>
+            <th></th>
+            <th class="num">Start capital (industry)</th>
+            ${state.firms.map(f => `<th class="num">${f.name}<div class="sub-cell-note">Prod / Profit</div></th>`).join('')}
+            <th class="num">Total prod.</th>
+            <th class="num">Round profit</th>
+            <th class="num">CO\u2082</th>
+          </tr>
+        </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
