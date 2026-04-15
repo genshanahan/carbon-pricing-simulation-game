@@ -157,11 +157,16 @@ window.hostApp = {
       let val = el ? parseInt(el.value) || 0 : (fromSubmission ? fromSubmission.quantity : 0);
       production.push(val);
     }
+    const prevRound = state.regimeData[regime].currentRound;
     processRound(state, regime, production);
-    await clearSubmissions(ROOM, regime, state.regimeData[regime].currentRound - 1);
+    const newRound = state.regimeData[regime].currentRound;
+    console.log(`[HOST] submitRound: processed ${regime} round ${prevRound} → now ${newRound}`);
+    await clearSubmissions(ROOM, regime, prevRound);
+    console.log(`[HOST] submitRound: cleared submissions for ${regime}_${prevRound}`);
     currentSubmissions = {};
-    submissionKey = null;  // force re-subscription to new round path
+    submissionKey = null;
     sync();
+    console.log(`[HOST] submitRound: synced, submissionKey reset — listenForSubmissions will rebind on next onStateChange`);
   },
 
   completeAndAdvance(regime, next) {
@@ -214,11 +219,16 @@ function listenForSubmissions() {
     return;
   }
   const wantKey = `${state.regime}_${d.currentRound}`;
-  if (wantKey === submissionKey) return;  // already listening on this path
+  if (wantKey === submissionKey) {
+    console.log(`[HOST] listenForSubmissions: already on ${wantKey}, skipping`);
+    return;
+  }
+  console.log(`[HOST] listenForSubmissions: switching ${submissionKey} → ${wantKey}`);
   if (submissionUnsub) { submissionUnsub(); submissionUnsub = null; }
   submissionKey = wantKey;
   currentSubmissions = {};
   submissionUnsub = onSubmissions(ROOM, state.regime, d.currentRound, subs => {
+    console.log(`[HOST] onSubmissions callback for ${wantKey}:`, JSON.stringify(subs));
     currentSubmissions = subs;
     render();
   });
