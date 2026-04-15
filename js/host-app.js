@@ -12,13 +12,14 @@ import {
 
 import {
   pushState, onStateChange, onSubmissions, clearSubmissions,
-  onStudentConnections, deleteRoom,
+  onStudentConnections, deleteRoom, onProposals,
 } from './firebase-sync.js';
 
 import {
   fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge,
   regimeUsesCleanTech, regimeUsesTax, regimeUsesPermits, regimeHasCap,
-  regimeHasPermitMarket, qrCodeUrl, regimeDescription,
+  regimeHasPermitMarket, qrCodeUrl, regimeDescription, debriefPrompt,
+  ppmContext, dwlAnalogy, facilitatorNotes, onboardingGuide,
 } from './ui-helpers.js';
 
 /* ── Globals ── */
@@ -32,6 +33,9 @@ let studentConnections = {};
 let currentSubmissions = {};
 let submissionUnsub = null;
 let submissionKey = null;  // tracks which regime_round the listener is bound to
+let currentProposals = {};
+let proposalUnsub = null;
+let proposalRegime = null;
 
 const content = document.getElementById('content');
 const navEl = document.getElementById('regimeNav');
@@ -68,10 +72,11 @@ export async function init() {
       }
       state.config = buildConfig(state.config);
       renderNav();
-      /* Re-bind after every state push (e.g. processed round): `currentRound` moves
-         but submission listener was only set on tab change — otherwise the host
-         stays subscribed to the previous round's Firebase path. */
       listenForSubmissions();
+      if (REGIMES.includes(state.regime)) {
+        const rd = state.regimeData[state.regime];
+        if (rd && rd.debriefActive) listenForProposals(state.regime);
+      }
       render();
     } catch (err) {
       console.error(err);
@@ -169,7 +174,16 @@ window.hostApp = {
     console.log(`[HOST] submitRound: synced, submissionKey reset — listenForSubmissions will rebind on next onStateChange`);
   },
 
+  startDebrief(regime) {
+    state.regimeData[regime].debriefActive = true;
+    listenForProposals(regime);
+    sync();
+  },
+
   completeAndAdvance(regime, next) {
+    state.regimeData[regime].debriefActive = false;
+    if (proposalUnsub) { proposalUnsub(); proposalUnsub = null; proposalRegime = null; }
+    currentProposals = {};
     completeRegime(state, regime);
     state.regime = next;
     if (REGIMES.includes(next) && !state.regimeData[next]) {
@@ -234,6 +248,19 @@ function listenForSubmissions() {
   });
 }
 
+/* ── Proposal listener ── */
+
+function listenForProposals(regime) {
+  if (proposalRegime === regime) return;
+  if (proposalUnsub) { proposalUnsub(); proposalUnsub = null; }
+  proposalRegime = regime;
+  currentProposals = {};
+  proposalUnsub = onProposals(ROOM, regime, proposals => {
+    currentProposals = proposals;
+    render();
+  });
+}
+
 /* ── Main render ── */
 
 function render() {
@@ -271,6 +298,8 @@ function renderSetup() {
       <img class="qr-img" src="${qrCodeUrl(joinUrl.toString())}" alt="QR code to join" width="200" height="200">
       <div class="join-url">${joinUrl.toString()}</div>
     </div>
+
+    ${onboardingGuide()}
 
     <div class="card">
       <h2>Game Setup</h2>
@@ -313,11 +342,30 @@ function renderRegime(regime) {
   };
   const [nextRegime, nextLabel] = nextMap[regime] || ['results', 'Results'];
 
+  const fnotes = facilitatorNotes(regime);
+  let fnotesHtml = '';
+  if (fnotes) {
+    fnotesHtml = `
+      <details class="facilitator-notes">
+        <summary>Facilitator Notes — ${REGIME_LABELS[regime]}</summary>
+        <div class="fn-body">
+          <p><strong>Timing:</strong> ${fnotes.timing}</p>
+          <p><strong>Key points:</strong></p>
+          <ul>${fnotes.keyPoints.map(p => `<li>${p}</li>`).join('')}</ul>
+          <p><strong>Expected dynamics:</strong></p>
+          <ul>${fnotes.expectedDynamics.map(p => `<li>${p}</li>`).join('')}</ul>
+          <p><strong>Debrief tips:</strong></p>
+          <ul>${fnotes.debriefTips.map(p => `<li>${p}</li>`).join('')}</ul>
+        </div>
+      </details>`;
+  }
+
   let html = `
     <div class="card">
       <h2>${REGIME_LABELS[regime]}</h2>
       <div class="info-box accent">${regimeDescription(regime, config)}</div>
     </div>
+    ${fnotesHtml}
     ${renderCO2Meter(d.ppm, config, isTax ? `<div style="margin-top:0.4rem;font-size:0.85rem;">Tax revenue: <strong>${fmtMoney(d.totalTaxRevenue)}</strong></div>` : '')}
   `;
 
@@ -589,6 +637,88 @@ function renderRegimeSummary(regime, d, config, nextRegime, nextLabel) {
       </div>`;
   }
 
+  const ppmCtx = ppmContext(d.ppm);
+  const ppmContextHtml = `
+    <div class="ppm-context-box" style="border-color:${ppmCtx.colour};">
+      <div class="ppm-context-level" style="color:${ppmCtx.colour};">${ppmCtx.level}</div>
+      <p>${ppmCtx.description}</p>
+      <div class="ppm-context-source">Source: IPCC AR6 Synthesis Report (2023)</div>
+    </div>`;
+
+  let dwlAnalogHtml = '';
+  if (regime !== 'freemarket') {
+    const dwl = computeDeadweightLoss(state, regime);
+    const analog = dwlAnalogy(dwl, totalProfit);
+    if (analog) {
+      dwlAnalogHtml = `
+        <div class="dwl-analogy-box">
+          <p>${analog}</p>
+        </div>`;
+    }
+  }
+
+  const isDebriefActive = d.debriefActive;
+  const prompt = debriefPrompt(regime);
+
+  let debriefHtml = '';
+  if (!isDebriefActive) {
+    debriefHtml = `
+      <div class="mt-1">
+        <button class="btn btn-warn btn-block" onclick="window.hostApp.startDebrief('${regime}')">
+          Begin Debrief &amp; Student Proposals
+        </button>
+      </div>`;
+  } else {
+    const proposalEntries = Object.entries(currentProposals);
+    const proposalCards = proposalEntries.length > 0
+      ? proposalEntries.map(([firmId, p]) => {
+          const firm = state.firms[parseInt(firmId)];
+          const name = firm ? firm.name : `Firm ${parseInt(firmId) + 1}`;
+          const color = firmColor(parseInt(firmId));
+          return `<div class="proposal-card" style="border-left:3px solid ${color};">
+            <div style="font-weight:600;color:${color};font-size:0.85rem;">${name}</div>
+            <div style="font-size:0.88rem;margin-top:0.25rem;">${p.text || '<em>No text</em>'}</div>
+          </div>`;
+        }).join('')
+      : '<p style="font-size:0.85rem;color:var(--text-secondary);font-style:italic;">Waiting for student proposals…</p>';
+
+    debriefHtml = `
+      <div class="card debrief-active-card">
+        <h3>Debrief: Student Proposals</h3>
+        <div class="debrief-prompt-box">
+          <p><strong>Prompt shown to students:</strong></p>
+          <p style="font-style:italic;">"${prompt.question}"</p>
+        </div>
+        <div class="proposals-list mt-1">
+          <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+            ${proposalEntries.length}/${state.config.numFirms} proposals received
+          </div>
+          ${proposalCards}
+        </div>
+      </div>`;
+  }
+
+  let nextPreview = '';
+  if (nextRegime !== 'results' && isDebriefActive) {
+    const nextDesc = regimeDescription(nextRegime, config);
+    nextPreview = `
+      <div class="next-regime-preview">
+        <div class="next-regime-label">Coming next (facilitator only — not shown to students)</div>
+        <strong>${nextLabel}</strong>
+        <div style="font-size:0.82rem;margin-top:0.3rem;color:var(--text-secondary);">${nextDesc}</div>
+      </div>`;
+  }
+
+  let advanceHtml = '';
+  if (isDebriefActive) {
+    advanceHtml = `
+      <div class="mt-1">
+        <button class="btn btn-primary btn-block" onclick="window.hostApp.completeAndAdvance('${regime}', '${nextRegime}')">
+          Reveal &amp; Proceed to ${nextLabel} &rarr;
+        </button>
+      </div>`;
+  }
+
   return `
     <div class="card">
       <h2>Regime Summary: ${REGIME_LABELS[regime]}</h2>
@@ -604,11 +734,11 @@ function renderRegimeSummary(regime, d, config, nextRegime, nextLabel) {
         <span class="stat-value">${d.catastrophe ? '\ud83d\udca5 YES' : '\u2705 No'}</span></div>
       ${taxHtml}
       ${marketHtml}
-      <div class="mt-1">
-        <button class="btn btn-primary btn-block" onclick="window.hostApp.completeAndAdvance('${regime}', '${nextRegime}')">
-          Proceed to ${nextLabel} &rarr;
-        </button>
-      </div>
+      ${ppmContextHtml}
+      ${dwlAnalogHtml}
+      ${debriefHtml}
+      ${nextPreview}
+      ${advanceHtml}
     </div>`;
 }
 

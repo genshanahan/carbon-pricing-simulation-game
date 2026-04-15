@@ -246,6 +246,73 @@ label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 0.2
 .facilitator-notes .fn-body ul { margin-left: 1.25rem; }
 .facilitator-notes .fn-body li { margin-bottom: 0.25rem; }
 
+/* ── Real-world PPM context ── */
+
+.ppm-context-box {
+  background: #fafbfc; border: 2px solid var(--border); border-radius: 0.75rem;
+  padding: 1rem; margin-bottom: 1rem; margin-top: 1rem;
+}
+.ppm-context-box .ppm-context-level {
+  font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.03em; margin-bottom: 0.4rem;
+}
+.ppm-context-box p { font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.4rem; }
+.ppm-context-box .ppm-context-source {
+  font-size: 0.72rem; color: var(--text-secondary); font-style: italic; margin-top: 0.5rem;
+}
+
+/* ── Deadweight loss analogy ── */
+
+.dwl-analogy-box {
+  background: #fff8ed; border: 1px solid #f9e2b0; border-radius: 0.5rem;
+  padding: 0.9rem; margin-bottom: 1rem; font-size: 0.88rem; line-height: 1.5;
+}
+
+/* ── Debrief / proposal UI ── */
+
+.debrief-active-card {
+  border-color: var(--warn); border-width: 2px;
+}
+
+.debrief-prompt-box {
+  background: #fef9e7; border: 1px solid #f9e2b0; border-radius: 0.5rem;
+  padding: 0.9rem; font-size: 0.88rem;
+}
+.debrief-prompt-box p { margin-bottom: 0.4rem; }
+.debrief-prompt-box p:last-child { margin-bottom: 0; }
+
+.proposals-list { }
+
+.proposal-card {
+  background: #fafbfc; border: 1px solid var(--border); border-radius: 0.5rem;
+  padding: 0.65rem 0.85rem; margin-bottom: 0.5rem;
+}
+
+.debrief-student-card {
+  background: #fef9e7; border: 2px solid var(--warn); border-radius: 0.75rem;
+  padding: 1.25rem; margin-bottom: 1rem; text-align: center;
+}
+.debrief-student-card h3 { color: var(--warn); margin-bottom: 0.5rem; }
+.debrief-student-card textarea {
+  font-family: inherit; font-size: 0.88rem; padding: 0.6rem;
+  border: 1px solid var(--border); border-radius: 0.5rem;
+}
+.debrief-student-card textarea:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(74,86,168,0.15);
+}
+
+/* ── Next regime preview (facilitator only) ── */
+
+.next-regime-preview {
+  background: #f4f6fa; border: 1px dashed var(--border); border-radius: 0.5rem;
+  padding: 0.9rem; margin-top: 1rem; opacity: 0.7;
+}
+.next-regime-preview .next-regime-label {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-secondary); font-weight: 600; margin-bottom: 0.2rem;
+}
+
 /* ── Utilities ── */
 
 .hidden { display: none !important; }

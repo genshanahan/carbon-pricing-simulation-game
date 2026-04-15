@@ -102,6 +102,7 @@ export function initRegimeData(config, existingData) {
     catastrophe: false,
     totalTaxRevenue: 0,
     trades: [],
+    debriefActive: false,
   };
 }
 
@@ -128,6 +129,7 @@ export function normalizeRegimeDatum(rd, config) {
     catastrophe: typeof rd.catastrophe === 'boolean' ? rd.catastrophe : false,
     totalTaxRevenue: typeof rd.totalTaxRevenue === 'number' ? rd.totalTaxRevenue : 0,
     trades: Array.isArray(rd.trades) ? rd.trades : [],
+    debriefActive: typeof rd.debriefActive === 'boolean' ? rd.debriefActive : false,
   };
 }
 

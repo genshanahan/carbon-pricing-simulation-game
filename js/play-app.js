@@ -6,8 +6,8 @@ import {
   REGIMES, REGIME_LABELS, buildConfig, maxAllowedProduction, unitsPerPermit,
   permitsRemaining, normalizeStateFromRemote,
 } from './game-engine.js';
-import { onStateChange, submitDecision, registerStudent } from './firebase-sync.js';
-import { fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge, regimeUsesCleanTech, regimeUsesTax, regimeUsesPermits, regimeHasCap, regimeHasPermitMarket, regimeDescription } from './ui-helpers.js';
+import { onStateChange, submitDecision, registerStudent, submitProposal } from './firebase-sync.js';
+import { fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge, regimeUsesCleanTech, regimeUsesTax, regimeUsesPermits, regimeHasCap, regimeHasPermitMarket, regimeDescription, debriefPrompt, ppmContext } from './ui-helpers.js';
 
 /* ── Globals ── */
 
@@ -18,6 +18,7 @@ if (!ROOM || isNaN(FIRM_ID)) { window.location.href = 'index.html'; }
 
 let state = null;
 let hasSubmitted = {};
+let hasProposed = {};
 
 const content = document.getElementById('content');
 const firmNameEl = document.getElementById('firmNameHeader');
@@ -145,6 +146,7 @@ function renderRegime(regime) {
     }
   } else {
     html += renderFirmSummary(regime, d, fd);
+    html += renderDebriefPrompt(regime, d);
   }
 
   if (d.rounds.length > 0) {
@@ -217,9 +219,46 @@ function renderCalculator(regime, fd, config) {
   return '';
 }
 
+/* ── Debrief proposal prompt ── */
+
+function renderDebriefPrompt(regime, d) {
+  if (!d.debriefActive) {
+    return `
+      <div class="card" style="text-align:center;color:var(--text-secondary);">
+        <p>Regime complete. Waiting for the facilitator to begin the debrief…</p>
+      </div>`;
+  }
+
+  const prompt = debriefPrompt(regime);
+  const alreadyProposed = hasProposed[regime];
+
+  if (alreadyProposed) {
+    return `
+      <div class="debrief-student-card" style="border-color:var(--success);">
+        <h3 style="color:var(--success);">Proposal submitted!</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);">
+          Waiting for the facilitator to reveal the next approach…
+        </p>
+      </div>`;
+  }
+
+  return `
+    <div class="debrief-student-card">
+      <h3>What would you change?</h3>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;">${prompt.question}</p>
+      ${prompt.hint ? `<p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.8rem;font-style:italic;">${prompt.hint}</p>` : ''}
+      <textarea id="proposalText" rows="4" placeholder="Discuss with your team, then type your proposal here…"
+                style="width:100%;resize:vertical;"></textarea>
+      <button class="btn btn-success mt-1" onclick="window.playApp.submitProposal('${regime}')">
+        Submit Proposal
+      </button>
+    </div>`;
+}
+
 /* ── Firm summary at end of regime ── */
 
 function renderFirmSummary(regime, d, fd) {
+  const ppmCtx = ppmContext(d.ppm);
   return `
     <div class="card" style="border-color:${firmColor(FIRM_ID)};">
       <h3>Your Results: ${REGIME_LABELS[regime]}</h3>
@@ -227,6 +266,11 @@ function renderFirmSummary(regime, d, fd) {
       <div class="stat-row"><span class="stat-label">Total profit</span><span class="stat-value">${fmtMoney(fd.totalProfit)}</span></div>
       <div class="stat-row"><span class="stat-label">Final capital</span><span class="stat-value">${fmtMoney(fd.capital)}</span></div>
       <div class="stat-row"><span class="stat-label">Catastrophe?</span><span class="stat-value">${d.catastrophe ? '\ud83d\udca5 YES' : '\u2705 No'}</span></div>
+    </div>
+    <div class="ppm-context-box" style="border-color:${ppmCtx.colour};">
+      <div class="ppm-context-level" style="color:${ppmCtx.colour};">${ppmCtx.level}</div>
+      <p>${ppmCtx.description}</p>
+      <div class="ppm-context-source">Source: IPCC AR6 Synthesis Report (2023)</div>
     </div>`;
 }
 
@@ -348,6 +392,22 @@ window.playApp = {
       If you <strong>sell</strong> at ${fmtMoney(price)}: ${gainFromSelling >= 0 ? 'gain' : 'loss'} of <strong>${fmtMoney(Math.abs(gainFromSelling))}</strong><br>
       If you <strong>buy</strong> at ${fmtMoney(price)}: ${gainFromBuying >= 0 ? 'gain' : 'loss'} of <strong>${fmtMoney(Math.abs(gainFromBuying))}</strong>
     `;
+  },
+
+  async submitProposal(regime) {
+    const textarea = document.getElementById('proposalText');
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (!text) { alert('Please enter your proposal before submitting.'); return; }
+
+    try {
+      await submitProposal(ROOM, regime, FIRM_ID, text);
+      hasProposed[regime] = true;
+      render();
+    } catch (e) {
+      console.error('[STUDENT] submitProposal failed', e);
+      alert('Could not submit proposal. Check your connection.\n\n' + e.message);
+    }
   },
 
   async submitProd(regime, round, maxAllowed) {
