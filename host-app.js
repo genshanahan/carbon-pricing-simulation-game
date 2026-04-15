@@ -31,6 +31,7 @@ let state = null;
 let studentConnections = {};
 let currentSubmissions = {};
 let submissionUnsub = null;
+let submissionKey = null;  // tracks which regime_round the listener is bound to
 
 const content = document.getElementById('content');
 const navEl = document.getElementById('regimeNav');
@@ -159,6 +160,7 @@ window.hostApp = {
     processRound(state, regime, production);
     await clearSubmissions(ROOM, regime, state.regimeData[regime].currentRound - 1);
     currentSubmissions = {};
+    submissionKey = null;  // force re-subscription to new round path
     sync();
   },
 
@@ -202,13 +204,20 @@ window.hostApp = {
 /* ── Submission listener ── */
 
 function listenForSubmissions() {
-  if (submissionUnsub) {
-    submissionUnsub();
-    submissionUnsub = null;
+  if (!state || !REGIMES.includes(state.regime)) {
+    if (submissionUnsub) { submissionUnsub(); submissionUnsub = null; submissionKey = null; }
+    return;
   }
-  if (!state || !REGIMES.includes(state.regime)) return;
   const d = state.regimeData[state.regime];
-  if (!d || d.currentRound >= state.config.numRounds) return;
+  if (!d || d.currentRound >= state.config.numRounds) {
+    if (submissionUnsub) { submissionUnsub(); submissionUnsub = null; submissionKey = null; }
+    return;
+  }
+  const wantKey = `${state.regime}_${d.currentRound}`;
+  if (wantKey === submissionKey) return;  // already listening on this path
+  if (submissionUnsub) { submissionUnsub(); submissionUnsub = null; }
+  submissionKey = wantKey;
+  currentSubmissions = {};
   submissionUnsub = onSubmissions(ROOM, state.regime, d.currentRound, subs => {
     currentSubmissions = subs;
     render();
