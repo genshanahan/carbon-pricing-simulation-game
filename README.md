@@ -82,6 +82,8 @@ Real-time sync between devices is handled by Firebase Realtime Database (free ti
 }
 ```
 
+**Troubleshooting `PERMISSION_DENIED` when creating a room:** Rules must allow `.write` on each of `state`, `submissions`, `debrief`, `cleantech`, and `meta` (see above). The app uses `update()` so those child rules apply; a parent-only `set()` on the whole room would also require `.write` on `$roomId` itself. Ensure `cleantech` is present if you added clean-tech claiming after an older rules deploy.
+
 #### 3. Add your Firebase config
 
 Open `js/firebase-config.js` and replace the placeholder values with your project's config:

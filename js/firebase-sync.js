@@ -26,7 +26,10 @@ function roomRef(roomCode) {
 export async function createRoom(roomCode, initialState) {
   ensureInit();
   const ref = roomRef(roomCode);
-  await ref.set({
+  /* Use update (not set) on the room root so rules evaluate per child path.
+     Rules that only allow `.write` on `state`, `meta`, etc. reject a parent
+     `set()` that replaces the whole room object (PERMISSION_DENIED). */
+  await ref.update({
     state: initialState,
     submissions: {},
     debrief: {},
