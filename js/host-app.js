@@ -100,6 +100,7 @@ export async function init() {
         return;
       }
       state.config = buildConfig(state.config);
+      console.log(`[HOST] onStateChange: regime=${state.regime}, cleantechCache=`, JSON.stringify(cleantechClaimsByRegime));
       renderNav();
       listenForSubmissions();
       if (REGIMES.includes(state.regime)) {
@@ -347,20 +348,28 @@ function listenForSubmissions() {
 
 function listenForCleanTechClaims() {
   if (!state || !REGIMES.includes(state.regime)) {
+    console.log('[HOST] listenForCleanTechClaims: no state or not a regime, unsubscribing');
     if (cleantechUnsub) { cleantechUnsub(); cleantechUnsub = null; cleantechKey = null; }
     return;
   }
   const regime = state.regime;
   const d = state.regimeData[regime];
   if (!regimeUsesCleanTech(regime) || !d || d.currentRound !== 0 || d.rounds.length > 0) {
+    console.log(`[HOST] listenForCleanTechClaims: skipping for ${regime} (usesClean=${regimeUsesCleanTech(regime)}, round=${d?.currentRound}, rounds=${d?.rounds?.length})`);
     if (cleantechUnsub) { cleantechUnsub(); cleantechUnsub = null; cleantechKey = null; }
     return;
   }
-  if (cleantechKey === regime && cleantechUnsub) return;
+  if (cleantechKey === regime && cleantechUnsub) {
+    console.log(`[HOST] listenForCleanTechClaims: already listening on ${regime}`);
+    return;
+  }
   if (cleantechUnsub) { cleantechUnsub(); cleantechUnsub = null; }
   cleantechKey = regime;
+  console.log(`[HOST] listenForCleanTechClaims: subscribing to cleantech/${regime}`);
   cleantechUnsub = onCleanTechClaims(ROOM, regime, claims => {
-    cleantechClaimsByRegime[regime] = claims && typeof claims === 'object' && !Array.isArray(claims) ? claims : {};
+    const parsed = claims && typeof claims === 'object' && !Array.isArray(claims) ? claims : {};
+    console.log(`[HOST] onCleanTechClaims callback for ${regime}:`, JSON.stringify(parsed));
+    cleantechClaimsByRegime[regime] = parsed;
     render();
   });
 }
@@ -525,6 +534,7 @@ function renderRegime(regime) {
 function renderCleanTechAssignment(regime, d) {
   const maxSlots = state.config.maxCleanTech ?? 3;
   const slotsUsed = countCleanTechSlots(regime);
+  console.log(`[HOST] renderCleanTechAssignment: regime=${regime}, slotsUsed=${slotsUsed}, cache=`, JSON.stringify(cleantechClaimsByRegime[regime]), 'state firms cleanTech=', d.firms.map(f => f.cleanTech));
   return `
     <div class="card">
       <h3>Clean Technology Assignment</h3>
