@@ -214,7 +214,16 @@ function renderRegime(regime) {
   if (!d) return renderWaiting('Loading regime data…');
   const config = state.config;
   const fd = d.firms[FIRM_ID];
-  const fdEff = { ...fd, cleanTech: firmCleanTechEffective(regime, fd) };
+  const claimPending = firmCleanTechEffective(regime, fd) && !fd.cleanTech;
+  const fdEff = {
+    ...fd,
+    cleanTech: firmCleanTechEffective(regime, fd),
+    ...(claimPending ? {
+      capital: fd.capital - config.cleanTechCost,
+      totalProfit: fd.totalProfit - config.cleanTechCost,
+      cleanTechInvestment: config.cleanTechCost,
+    } : {}),
+  };
   const firm = state.firms[FIRM_ID];
   const roundDone = d.currentRound >= config.numRounds;
   const usesClean = regimeUsesCleanTech(regime);
@@ -228,7 +237,7 @@ function renderRegime(regime) {
     <div class="student-firm-header" style="border-color:${firmColor(FIRM_ID)};">
       <div class="firm-name-large" style="color:${firmColor(FIRM_ID)};">${firm.name}</div>
       ${usesClean ? `<div>${cleanBadge(fdEff)}</div>` : ''}
-      <div class="firm-capital">${fmtMoney(fd.capital)}</div>
+      <div class="firm-capital">${fmtMoney(fdEff.capital)}</div>
       <div style="font-size:0.82rem;color:var(--text-secondary);">Available capital</div>
     </div>
   `;
