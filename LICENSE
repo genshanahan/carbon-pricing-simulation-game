@@ -1,0 +1,26 @@
+The Carbon Pricing Simulation Game (software and accompanying documentation in this repository)
+
+Copyright (c) 2026 Genevieve Shanahan
+
+This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Licence.
+
+To view a copy of this licence, visit:
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+---
+
+Attribution for adapted material
+
+This project adapts and extends prior educational simulations. Users of this work must retain and reproduce appropriate attribution to:
+
+- The Thingamabob Game — Bill Bigelow (2009 / 2015)
+- The Carbon Emissions Game — Gautam Sethi (2017)
+- The Pollution Game — Jay Corrigan (2011)
+
+See the project README for full citation details and links.
+
+---
+
+SPDX-License-Identifier: CC-BY-NC-SA-4.0

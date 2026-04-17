@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Carbon Pricing Simulation Game</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header>
+  <h1>The Carbon Pricing Simulation Game</h1>
+  <p>An interactive classroom simulation of carbon regulation regimes</p>
+</header>
+
+<main id="main-content" class="container-narrow">
+
+  <div class="card" id="landing">
+    <h2>Welcome</h2>
+    <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1.25rem;">
+      This game lets students experience several regulatory approaches to carbon emissions
+      &mdash; from free markets to cap and trade &mdash; and discover why each produces
+      different outcomes.
+    </p>
+
+    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+      <div class="card" style="border:2px solid var(--accent); margin-bottom:0;">
+        <h3 style="color:var(--accent);">I'm the facilitator</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+          Create a new game room. Students will join on their phones.
+        </p>
+        <button class="btn btn-primary btn-block" onclick="createNewRoom()">
+          Create Game Room
+        </button>
+      </div>
+
+      <div class="card" style="margin-bottom:0;border:2px solid var(--success);">
+        <h3 style="color:var(--success);">Try it solo</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+          Play through all five regimes on your own against AI firms.
+          No room code or students needed &mdash; ideal for exploring the game before running it in class.
+        </p>
+        <a href="solo.html" class="btn btn-success btn-block" style="text-decoration:none;">
+          Start Solo Demo
+        </a>
+      </div>
+
+      <div class="card" style="margin-bottom:0;">
+        <h3>I'm a student</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+          Enter the room code shown on the projected screen, or scan the QR code.
+        </p>
+        <div style="display:flex; gap:0.5rem;">
+          <input type="text" id="joinCode" placeholder="Room code" maxlength="5"
+                 style="flex:1; text-transform:uppercase; font-size:1.1rem; text-align:center; letter-spacing:0.1em;"
+                 onkeydown="if(event.key==='Enter')joinExistingRoom()">
+          <button class="btn btn-primary" onclick="joinExistingRoom()">Join</button>
+        </div>
+        <div id="joinError" style="color:var(--danger); font-size:0.82rem; margin-top:0.4rem;" class="hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="firmSelect">
+    <h2>Select Your Firm</h2>
+    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+      Choose the firm your group has been assigned to:
+    </p>
+    <div id="firmButtons"></div>
+    <div style="margin-top:0.75rem;">
+      <button class="btn btn-outline btn-sm" onclick="backToLanding()">&larr; Back</button>
+    </div>
+  </div>
+
+</main>
+
+<footer class="attribution">
+  Adapted from <em>The Thingamabob Game</em> (Bigelow 2009),
+  <em>The Carbon Emissions Game</em> (Sethi 2017), and
+  <em>The Pollution Game</em> (Corrigan 2011).<br>
+  Extended by Dr Genevieve Shanahan, Cardiff Business School.
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script type="module">
+import { generateRoomCode } from './js/ui-helpers.js';
+import { createRoom, roomExists, joinRoom } from './js/firebase-sync.js';
+import { buildConfig, createInitialState } from './js/game-engine.js';
+
+function gatherLandingConfig() {
+  return buildConfig({});
+}
+
+const params = new URLSearchParams(window.location.search);
+const presetRoom = params.get('room');
+if (presetRoom) {
+  document.getElementById('joinCode').value = presetRoom;
+}
+
+window.createNewRoom = async function() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  try {
+    let code = generateRoomCode();
+    let tries = 0;
+    while (await roomExists(code) && tries < 10) { code = generateRoomCode(); tries++; }
+    const config = gatherLandingConfig();
+    const state = createInitialState(config);
+    await createRoom(code, state);
+    window.location.href = `host.html?room=${code}`;
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Create Game Room';
+    alert('Could not create room. Check your Firebase configuration.\n\n' + e.message);
+  }
+};
+
+window.joinExistingRoom = async function() {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  const errEl = document.getElementById('joinError');
+  errEl.classList.add('hidden');
+  if (!code || code.length < 4) {
+    errEl.textContent = 'Please enter a valid room code.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  try {
+    const state = await joinRoom(code);
+    showFirmSelect(code, state);
+  } catch (e) {
+    errEl.textContent = 'Room not found. Check the code and try again.';
+    errEl.classList.remove('hidden');
+  }
+};
+
+function showFirmSelect(code, state) {
+  document.getElementById('landing').classList.add('hidden');
+  const panel = document.getElementById('firmSelect');
+  panel.classList.remove('hidden');
+  const container = document.getElementById('firmButtons');
+  container.innerHTML = state.firms.map((f, i) => `
+    <button class="btn btn-outline btn-block" style="margin-bottom:0.5rem; border-color:var(--firm${i}); color:var(--firm${i});"
+            onclick="selectFirm('${code}', ${i})">
+      ${f.name}
+    </button>
+  `).join('');
+}
+
+window.selectFirm = function(code, firmId) {
+  window.location.href = `play.html?room=${code}&firm=${firmId}`;
+};
+
+window.backToLanding = function() {
+  document.getElementById('firmSelect').classList.add('hidden');
+  document.getElementById('landing').classList.remove('hidden');
+};
+</script>
+</body>
+</html>

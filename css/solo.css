@@ -1,0 +1,54 @@
+/* ── Solo Play Mode — supplementary styles ── */
+
+.container-solo {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Welcome card */
+.solo-welcome {
+  text-align: center;
+}
+.solo-welcome p,
+.solo-welcome .info-box {
+  text-align: left;
+}
+
+/* Educator commentary card */
+.educator-commentary {
+  background: #f8f4ff;
+  border: 1px solid #d8cce8;
+  border-radius: 0.75rem;
+}
+.educator-commentary h3 {
+  color: #6c3483;
+  margin-bottom: 0.5rem;
+}
+.educator-commentary p {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin-bottom: 0.5rem;
+}
+.educator-commentary p:last-child {
+  margin-bottom: 0;
+}
+
+/* Trade form adjustments for solo mode */
+.container-solo .two-col {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Responsive for moderate screens */
+@media (max-width: 800px) {
+  .container-solo {
+    max-width: 100%;
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .container-solo .two-col {
+    grid-template-columns: 1fr;
+  }
+}
