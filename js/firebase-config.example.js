@@ -1,13 +1,9 @@
 /**
- * Firebase project configuration.
+ * Firebase project configuration — TEMPLATE FOR FORKERS.
  *
- * SETUP: Create a Firebase project at https://console.firebase.google.com/
- *   1. Create a new project (or use an existing one)
- *   2. Add a Web app (Project Settings > General > Your apps > Add app)
- *   3. Copy your config values into a new file: js/firebase-config.js
- *   4. Enable Realtime Database (Build > Realtime Database > Create Database)
- *      — choose "Start in test mode" for development
- *   5. For production, set database rules (see SETUP.md)
+ * If you are forking this repository to run your own instance, copy this
+ * file to js/firebase-config.js and replace the placeholder values with
+ * your own Firebase project's config. See SETUP.md for full instructions.
  */
 export const FIREBASE_CONFIG = {
   apiKey: 'YOUR_API_KEY',
