@@ -11,10 +11,10 @@
  */
 export const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyC8aLy5pMNi4dIuHQf-tlhkiLV2kRWLnK0',
-  authDomain: 'carbon-pricing-game.firebaseapp.com',
-  databaseURL: 'https://carbon-pricing-game-default-rtdb.europe-west1.firebasedatabase.app/',
-  projectId: 'carbon-pricing-game',
-  storageBucket: 'carbon-pricing-game.firebasestorage.app',
+  authDomain: 'carbon-pricing-simulation-game.firebaseapp.com',
+  databaseURL: 'https://carbon-pricing-simulation-game-default-rtdb.europe-west1.firebasedatabase.app/',
+  projectId: 'carbon-pricing-simulation-game',
+  storageBucket: 'carbon-pricing-simulation-game.firebasestorage.app',
   messagingSenderId: '955303771390',
   appId: '1:955303771390:web:49093d49e79b33e756f9af',
 };

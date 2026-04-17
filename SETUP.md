@@ -11,7 +11,7 @@ The **facilitated version** uses Firebase Realtime Database to sync game state b
 ## 1. Create a Firebase project
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click **Add project** (any name, e.g. "carbon-pricing-game")
+2. Click **Add project** (any name, e.g. "carbon-pricing-simulation-game")
 3. Disable Google Analytics (not needed) and create the project
 4. Go to **Project Settings > General > Your apps** and click the web icon (`</>`)
 5. Register the app (any nickname) — do **not** enable Firebase Hosting
@@ -93,7 +93,7 @@ Then open **http://localhost:8000** in a browser. Stop the server with **Ctrl+C*
 ## File structure
 
 ```
-carbon-pricing-game/
+carbon-pricing-simulation-game/
 ├── index.html              Landing page (create room / join / solo link)
 ├── host.html               Facilitator view (projected on classroom screen)
 ├── play.html               Student view (mobile)

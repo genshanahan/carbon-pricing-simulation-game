@@ -6,9 +6,9 @@ created_date: 2026-04-15
 
 An interactive classroom simulation of five carbon regulation regimes — from free markets to cap and trade — designed for sustainability and business education.
 
-**[Try the solo demo](https://genshanahan.github.io/carbon-pricing-game/solo.html)** — no setup required. Play through all five regimes against AI firms in your browser.
+**[Try the solo demo](https://genshanahan.github.io/carbon-pricing-simulation-game/solo.html)** — no setup required. Play through all five regimes against AI firms in your browser.
 
-**[Launch the facilitated version](https://genshanahan.github.io/carbon-pricing-game/)** — requires a free Firebase project for real-time sync between devices. See [SETUP.md](SETUP.md) for instructions.
+**[Launch the facilitated version](https://genshanahan.github.io/carbon-pricing-simulation-game/)** — requires a free Firebase project for real-time sync between devices. See [SETUP.md](SETUP.md) for instructions.
 
 ## Why this game exists
 
@@ -58,7 +58,7 @@ The primary mode. A facilitator projects the host view on a classroom screen; st
 
 ### Solo mode (self-study)
 
-Open **[solo.html](https://genshanahan.github.io/carbon-pricing-game/solo.html)** in any browser. No Firebase, no room code, no other players needed. You play as one firm alongside AI opponents that pursue profit-maximising strategies. Suitable for:
+Open **[solo.html](https://genshanahan.github.io/carbon-pricing-simulation-game/solo.html)** in any browser. No Firebase, no room code, no other players needed. You play as one firm alongside AI opponents that pursue profit-maximising strategies. Suitable for:
 
 - Educators previewing the game before running it in class
 - Students preparing before a facilitated session
@@ -78,7 +78,7 @@ The key adaptation is simplification: the game strips out continuous marginal ab
 
 ## How to cite
 
-> Shanahan, G. (2026). *The Carbon Pricing Simulation Game* [Web application]. Cardiff Business School, Cardiff University. Available at: https://github.com/genshanahan/carbon-pricing-game
+> Shanahan, G. (2026). *The Carbon Pricing Simulation Game* [Web application]. Cardiff Business School, Cardiff University. Available at: https://github.com/genshanahan/carbon-pricing-simulation-game
 
 ## Licence
 
@@ -88,4 +88,4 @@ You are free to adapt and share this game for non-commercial educational purpose
 
 ## Contributing and feedback
 
-Suggestions, bug reports, and pull requests are welcome. Please [open an issue](https://github.com/genshanahan/carbon-pricing-game/issues) or get in touch.
+Suggestions, bug reports, and pull requests are welcome. Please [open an issue](https://github.com/genshanahan/carbon-pricing-simulation-game/issues) or get in touch.
