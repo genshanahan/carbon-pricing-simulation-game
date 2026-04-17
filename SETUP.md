@@ -1,3 +1,7 @@
+---
+modified_date: 2026-04-17
+created_date: 2026-04-17
+---
 # Setup Guide — Facilitated Mode
 
 The **solo version** (`solo.html`) runs entirely in the browser with no external services. If that is all you need, no setup is required.
@@ -41,7 +45,7 @@ The **facilitated version** uses Firebase Realtime Database to sync game state b
 
 ## 3. Add your Firebase config
 
-Open `js/firebase-config.js` and replace the placeholder values with the config from your Firebase project:
+The hosted version at `genshanahan.github.io` ships with a working Firebase config. **If you fork this repository to run your own instance**, create your own Firebase project and replace the values in `js/firebase-config.js` with your project's config. A template is provided in `js/firebase-config.example.js`.
 
 ```javascript
 export const FIREBASE_CONFIG = {
@@ -55,7 +59,7 @@ export const FIREBASE_CONFIG = {
 };
 ```
 
-> **Note:** If you fork this repository, do not commit your real Firebase config to a public repo. The config file is listed in `.gitignore`; use `js/firebase-config.example.js` as a template.
+Firebase web API keys are designed to be public (they identify the project, not grant privileged access). Database security is enforced by the Realtime Database rules in step 2. For additional protection, you can restrict your API key to specific referrer domains in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
 
 ## 4. Deploy
 

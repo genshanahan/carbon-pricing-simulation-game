@@ -82,9 +82,15 @@ function educatorCommentary(regime) {
 <p><strong>The key pedagogic insight:</strong> This is the tragedy of the commons in action. Rational individual behaviour produces a collectively irrational outcome. Many student groups spontaneously propose some form of production limit at this point — which is precisely what the next regime introduces.</p>`,
 
     cac: `<p><strong>What typically happens in a classroom:</strong> Catastrophe is usually avoided, but students quickly notice the inflexibility. Every firm is capped at the same level regardless of efficiency. Some students complain about being "stuck" — they have capital to spare but cannot use it.</p>
+<<<<<<< HEAD
 <p><strong>The key pedagogic insight:</strong> Command and control provides quantity certainty (emissions are controlled) but allocates production bluntly: every firm gets the same allowance regardless of how cleanly it can produce. Compare the Total Economic Output and Carbon Budget Used figures here against the later regimes — together they show both how much each approach produced and how much of the safe carbon headroom it consumed. Students often propose allowing firms to differ — "what if more efficient firms could produce more?" — which leads naturally to price-based instruments.</p>`,
 
     tax: `<p><strong>What typically happens in a classroom:</strong> Clean-tech firms start with less capital because the upfront investment is sunk immediately, leaving them production-constrained in the early rounds. Their higher per-unit margin (lower tax) means cumulative profit eventually overtakes standard firms — watch the capital tracker to see when. Students begin to see that cleaner production requires real upfront investment, and that a carbon tax gives firms a reason to make it.</p>
+=======
+<p><strong>The key pedagogic insight:</strong> Command and control provides quantity certainty (emissions are controlled) but at the cost of economic efficiency. The deadweight loss is mechanically the gap to free-market output, but free-market output overshoots the safe climate threshold. The honest reading is: the same regulatory goal could in principle have been met more efficiently by allowing firms with cheaper abatement to produce more. Through a fair-consumption-space lens, what matters is the goods and services people rely on at 1.5 °C, not foregone growth. Students often propose allowing firms to differ — "what if more efficient firms could produce more?" — which leads naturally to price-based instruments.</p>`,
+
+    tax: `<p><strong>What typically happens in a classroom:</strong> Clean-tech firms earn noticeably less in rounds 1–3 because the upfront investment is sunk against their starting capital, leaving them smaller producers. By round 4 the compounding tax saving pulls them ahead of standard firms on cumulative profit. Students begin to see that cleaner production requires real upfront investment, and that a carbon tax gives firms a reason to make it.</p>
+>>>>>>> 7cbde010e6d837ac73d2f06e2b1740296357836a
 <p><strong>The key pedagogic insight:</strong> A carbon tax gives price certainty but not quantity certainty — total emissions depend on how firms respond to the price signal. The tax rate may be too low (or too high). Students often ask: "What if we just set a hard limit on total emissions instead?" — which is exactly what permits do.</p>`,
 
     trade: `<p><strong>What typically happens in a classroom:</strong> Some firms finish with unused permits while others are constrained. Students quickly spot the inefficiency: "I have permits I don't need, and you want more — why can't we trade?"</p>
@@ -255,7 +261,11 @@ function renderRegimeScreen() {
   }
 
   if (d.rounds.length > 0) {
+<<<<<<< HEAD
     html += renderRoundHistory(regime, d, state.firms, state.config, PLAYER_FIRM);
+=======
+    html += renderRoundHistory(regime, d);
+>>>>>>> 7cbde010e6d837ac73d2f06e2b1740296357836a
   }
 
   if (roundDone) {
@@ -564,7 +574,11 @@ function renderTradePanel(regime, d, config) {
     if (i !== PLAYER_FIRM) {
       const afford = maxAffordable(fd, config);
       if (pr > 0 && reservation === 0) {
+<<<<<<< HEAD
         marketRole = '<span style="color:var(--success);font-weight:600;">Would sell surplus permits</span>';
+=======
+        marketRole = '<span style="color:var(--success);font-weight:600;">Would sell surplus</span>';
+>>>>>>> 7cbde010e6d837ac73d2f06e2b1740296357836a
       } else if (pr <= 0 && afford > 0) {
         marketRole = `<span style="color:#c0392b;font-weight:600;">Would buy up to ${fmtMoney(reservation)}</span>`;
       } else if (reservation > 0) {
@@ -930,7 +944,10 @@ function renderResultsScreen() {
     ${proposalReview}
     ${kuznetsHtml}
     ${discussionHtml}
+<<<<<<< HEAD
     ${renderComparisonTable(completed, REGIME_LABELS)}
+=======
+>>>>>>> 7cbde010e6d837ac73d2f06e2b1740296357836a
 
     <div class="card text-center">
       <button class="btn btn-primary" onclick="window.soloApp.playAgain()">Play Again</button>

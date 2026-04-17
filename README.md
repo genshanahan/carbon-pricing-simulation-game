@@ -1,3 +1,7 @@
+---
+modified_date: 2026-04-17
+created_date: 2026-04-15
+---
 # The Carbon Pricing Simulation Game
 
 An interactive classroom simulation of five carbon regulation regimes — from free markets to cap and trade — designed for sustainability and business education.

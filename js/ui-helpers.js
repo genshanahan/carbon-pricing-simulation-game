@@ -143,6 +143,7 @@ export function ppmContext(ppm) {
   };
 }
 
+<<<<<<< HEAD
 export function formatTotalEconomicOutput(value) {
   if (value == null) return '\u2014';
   return fmtMoney(value);
@@ -162,6 +163,16 @@ export function budgetUsedStyle(pct) {
 export function outputBudgetAnalogy(output, budgetUsed) {
   if (output == null && budgetUsed == null) return null;
   return `<strong>Total Economic Output</strong> is firm profit plus any tax revenue collected by the government \u2014 the full monetary value of what the economy produced this regime. Tax revenue counts because it represents output value redirected to the public sector, not output lost. <strong>Carbon Budget Used</strong> shows ppm added as a percentage of the safe carbon budget (the headroom between the starting ppm and the catastrophe trigger). A figure above 100% means the regime overshot the safe threshold. The two figures are shown side by side rather than collapsed into a single ratio so that the trade-off between output and climate impact remains visible. Neither figure alone tells the whole story: what was produced, for whom, and at what climate cost are all separate questions worth discussing.`;
+=======
+export function dwlAnalogy(dwl, totalProfit) {
+  if (dwl <= 0) return null;
+  const pct = totalProfit > 0 ? ((dwl / (totalProfit + dwl)) * 100).toFixed(1) : null;
+  let analogy = `The ${fmtMoney(dwl)} figure is the gap between this regime's output and what the free-market regime produced &mdash; bearing in mind that the free-market output came at the cost of breaching the safe climate threshold, so it is not a benchmark society could actually sustain. The economic interpretation is that the same regulatory goal could in principle have been met more efficiently &mdash; e.g. by allocating production toward firms that turn each unit of pollution into more useful output. Read through a fair-consumption-space lens (the level of material provisioning society can sustain within a 1.5&nbsp;&deg;C carbon budget), this inefficiency matters insofar as it cuts into the goods and services people rely on for a decent standard of living, rather than because it foregoes economic growth per se.`;
+  if (pct !== null) {
+    analogy += ` In scale terms, it is roughly equivalent to ${pct}% of what the industry actually produced this regime.`;
+  }
+  return analogy;
+>>>>>>> 7cbde010e6d837ac73d2f06e2b1740296357836a
 }
 
 export function debriefPrompt(regime) {
@@ -224,7 +235,11 @@ export function facilitatorNotes(regime) {
       ],
       debriefTips: [
         'Ask: "Was it fair that every firm had the same cap?" Some firms might have reduced pollution more cheaply.',
+<<<<<<< HEAD
         'Ask: "What do the Total Economic Output and Carbon Budget Used figures tell us?" (Output is firm profit plus any tax revenue — the full monetary value of what was produced. Budget Used shows how much of the safe carbon headroom was consumed; values above 100% mean the regime overshot. Together they let students compare regimes on output and climate impact without collapsing the trade-off into one number, and without implying that more output is always desirable — that depends on what is being produced and for whom.)',
+=======
+        'Ask: "What was the deadweight loss? What does it represent?" (The mechanical figure compares to free-market output, but free-market output overshoots the safe climate threshold. Read it instead as: in principle, the same regulatory goal could have been met more efficiently — by allocating production to firms that turn each unit of pollution into more useful output. The lens that matters is the fair consumption space at 1.5 °C, not foregone growth.)',
+>>>>>>> 7cbde010e6d837ac73d2f06e2b1740296357836a
         'Foreshadow: "What if instead of a hard cap, firms paid a price per unit of pollution?"',
       ],
     },
@@ -237,7 +252,12 @@ export function facilitatorNotes(regime) {
         'Clean-tech firms face a trade-off: lower tax per unit vs. a one-off sunk investment deducted from their capital before Round 1. Because that cash is no longer available for production, clean-tech firms start with less capital and are production-constrained in the early rounds — though their higher per-unit margin may partly or fully offset this depending on the tax rate.',
       ],
       expectedDynamics: [
+<<<<<<< HEAD
         'Clean-tech firms start with less capital because of the sunk investment, leaving them production-constrained in early rounds. Whether their per-round profit is immediately higher or lower than standard depends on the tax rate. Watch the cumulative capital tracker — the crossover point where clean-tech firms pull ahead is a key teaching moment.',
+=======
+        'Clean-tech firms will earn less in rounds 1–3 because the sunk investment leaves them capital-constrained. This is deliberate — ask students whether this feels fair.',
+        'By round 4 the compounding tax saving pulls clean-tech firms ahead of standard firms on cumulative profit.',
+>>>>>>> 7cbde010e6d837ac73d2f06e2b1740296357836a
         'Total emissions may still exceed the trigger — the tax rate may be too low.',
         'Students begin to see the efficiency argument: cleaner production requires an upfront investment, and a carbon tax gives firms a reason to make it.',
       ],
