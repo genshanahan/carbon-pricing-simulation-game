@@ -305,7 +305,6 @@ function renderRegime(regime) {
         </div>`;
     }
 
-    html += renderCalculator(regime, fdEff, config, d);
   } else {
     if (d.debriefActive) {
       html += renderFirmSummary(regime, d, fd);
@@ -319,6 +318,10 @@ function renderRegime(regime) {
 
   if (d.rounds.length > 0) {
     html += renderRoundHistory(regime, d, state.firms, state.config, FIRM_ID);
+  }
+
+  if (!roundDone) {
+    html += renderCalculator(regime, fdEff, config, d);
   }
 
   return html;

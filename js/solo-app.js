@@ -261,6 +261,11 @@ function renderRegimeScreen() {
     html += renderRoundHistory(regime, d, state.firms, state.config, PLAYER_FIRM);
   }
 
+  if (!roundDone && !cleanTechPending) {
+    const fd = d.firms[PLAYER_FIRM];
+    html += renderCalculator(regime, fd, config, d);
+  }
+
   if (roundDone) {
     html += `<div class="card text-center">
       <button class="btn btn-primary btn-block" onclick="window.soloApp.goToDebrief()" style="font-size:1rem;padding:0.7rem;">
@@ -391,7 +396,6 @@ function renderPlayerInput(regime, d, config) {
         Submit Round ${d.currentRound + 1}
       </button>
     </div>
-    ${renderCalculator(regime, fd, config, d)}
   </div>`;
 }
 
