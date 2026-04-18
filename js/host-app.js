@@ -1068,7 +1068,7 @@ function renderRegimeSummary(regime, d, config, nextRegime, nextLabel) {
       <div class="efficiency-metric"${budgetCellStyle ? ` style="${budgetCellStyle}border-radius:0.5rem;padding:0.5rem;"` : ''}>
         <div class="efficiency-label">% of Safe Carbon Budget Used</div>
         <div class="efficiency-value">${formatBudgetUsed(budgetUsed)}</div>
-        <div class="efficiency-label"><i> (treating 450 ppm as the "safe" carbon budget)</i></div>
+        <div class="efficiency-label"><i> (treating ${config.triggerPpm} ppm as the "safe" carbon budget)</i></div>
       </div>
     </div>`;
 

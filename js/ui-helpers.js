@@ -14,21 +14,23 @@ export function fmtMoney(n) {
 
 /**
  * PPM bands shown in the CO2 spectrum meter.
- * Boundaries align with the descriptions in `ppmContext()`. Each band labels
- * a meaningful step on the warming spectrum so students can see at a glance
- * that climate harm rises continuously, not only after the catastrophe trigger.
+ * Boundaries align with the descriptions in `ppmContext()` and correspond to
+ * the IPCC's Shared Socioeconomic Pathways (SSPs) from the CMIP6 ScenarioMIP
+ * framework (Meinshausen et al. 2020). Each band labels a distinct SSP
+ * trajectory so students can see at a glance which climate scenario their
+ * industry's emissions correspond to.
  */
 const PPM_SPECTRUM_BANDS = [
-  { max: 400, label: 'Pre-2015', colour: '#27ae60' },
-  { max: 430, label: 'Today \u2248425', colour: '#f1c40f' },
-  { max: 450, label: '+1.5\u00B0C', colour: '#e67e22' },
-  { max: 500, label: '+2\u00B0C', colour: '#e74c3c' },
-  { max: Infinity, label: 'Catastrophic', colour: '#922b21' },
+  { max: 450, label: '2026 baseline', colour: '#27ae60' },
+  { max: 470, label: 'Paris 1.5\u00B0C', colour: '#f1c40f' },
+  { max: 500, label: 'Paris 2\u00B0C', colour: '#e67e22' },
+  { max: 550, label: 'Beyond Paris', colour: '#e74c3c' },
+  { max: Infinity, label: 'SSP5-8.5', colour: '#922b21' },
 ];
 
 export function renderCO2Meter(ppm, config, extra) {
   const meterMin = config.startPpm;
-  const meterMax = Math.max(510, ppm + 20, config.triggerPpm + 60);
+  const meterMax = Math.max(560, ppm + 20, config.triggerPpm + 60);
   const span = Math.max(1, meterMax - meterMin);
   const danger = ppm >= config.triggerPpm;
 
@@ -68,7 +70,7 @@ export function renderCO2Meter(ppm, config, extra) {
         <span>${Math.round(meterMax)} ppm</span>
       </div>
       <p class="co2-spectrum-caption">
-        Every band on this spectrum involves real climate harm. The catastrophe trigger is a game mechanic; in the real world there is no clean line where damage suddenly begins.
+        The bands correspond to the IPCC\u2019s Shared Socioeconomic Pathways (SSPs) \u2014 the scenarios climate scientists use to project future warming based on different levels of global emissions. Every band involves real climate harm. The catastrophe trigger is a game mechanic; in the real world there is no clean line where damage suddenly begins.
       </p>
       ${extra || ''}
     </div>`;
@@ -108,38 +110,38 @@ export function qrCodeUrl(text, size = 250) {
 }
 
 export function ppmContext(ppm) {
-  if (ppm < 400) {
+  if (ppm < 450) {
     return {
-      level: 'Pre-2015',
-      description: `At ${fmt(ppm)} ppm, CO₂ concentration remains below 400 ppm — roughly where the real world was before 2015. Warming stays below +1°C above pre-industrial levels. Ecosystems are relatively stable.`,
+      level: '2026 baseline — SSP1-2.6 territory',
+      description: `At ${fmt(ppm)} ppm, CO₂ concentration is near the real-world level as of 2026 (~430 ppm). Under SSP1-2.6 (low emissions, net zero by ~2075), concentrations stay in this range through mid-century before declining. Warming is approximately +1.1–1.2°C above pre-industrial levels. Effects already include more frequent heatwaves, intensifying storms, and accelerating coral bleaching.`,
       colour: '#27ae60',
     };
   }
-  if (ppm < 430) {
+  if (ppm < 470) {
     return {
-      level: 'Current real-world level',
-      description: `At ${fmt(ppm)} ppm, this is close to the real world today (~425 ppm in 2025). Warming is approximately +1.1–1.2°C above pre-industrial levels. Effects include more frequent heatwaves, intensifying storms, and coral bleaching events.`,
+      level: 'Approaching Paris 1.5°C limit — SSP2-4.5 boundary',
+      description: `At ${fmt(ppm)} ppm, warming is approaching +1.5°C — the aspirational limit of the Paris Agreement. Under SSP2-4.5 (the "current trajectory" scenario), concentrations pass through this range in the 2030s–2040s. Extreme weather events become significantly more frequent, small island nations face existential flooding risk, and crop yields begin to decline in tropical regions.`,
       colour: '#f1c40f',
-    };
-  }
-  if (ppm < 450) {
-    return {
-      level: 'Approaching 1.5°C threshold',
-      description: `At ${fmt(ppm)} ppm, warming is approaching +1.5°C — the aspirational limit of the Paris Agreement. At this level, extreme weather events become significantly more common, small island nations face existential flooding risk, and crop yields begin to decline in tropical regions.`,
-      colour: '#e67e22',
     };
   }
   if (ppm < 500) {
     return {
-      level: 'Beyond 1.5°C — heading towards 2°C',
-      description: `At ${fmt(ppm)} ppm, warming is approximately +1.5–2°C. This exceeds the Paris Agreement's safer limit. Severe coral bleaching threatens 99% of reefs, Arctic summer sea ice disappears regularly, and ice sheet instability accelerates sea-level rise measurably.`,
+      level: 'Paris 2°C ceiling — SSP2-4.5 territory',
+      description: `At ${fmt(ppm)} ppm, warming approaches +2°C — the hard ceiling of the Paris Agreement. Under SSP2-4.5, concentrations reach this range by mid-century. Severe coral bleaching threatens 99% of reefs, Arctic summer sea ice disappears regularly, and ice sheet instability accelerates sea-level rise measurably.`,
       colour: '#e67e22',
     };
   }
+  if (ppm < 550) {
+    return {
+      level: 'Beyond Paris — SSP3-7.0 territory',
+      description: `At ${fmt(ppm)} ppm, warming exceeds +2°C. Under SSP3-7.0 (regional rivalry, emissions double by 2100), concentrations pass through this range by mid-century. This means mass displacement from coastal flooding, severe stress on agricultural systems, and irreversible ice sheet loss.`,
+      colour: '#e74c3c',
+    };
+  }
   return {
-    level: 'Catastrophic warming territory',
-    description: `At ${fmt(ppm)} ppm, warming exceeds +2°C and may approach +3°C or higher. This means mass displacement from coastal flooding, collapse of major agricultural systems, irreversible ice sheet loss, and severe biodiversity extinction. The IPCC AR6 describes this as "very high risk" across all assessed sectors.`,
-    colour: '#e74c3c',
+    level: 'Catastrophic — SSP5-8.5 territory',
+    description: `At ${fmt(ppm)} ppm, warming approaches +3°C or higher. Under SSP5-8.5 (very high emissions, triple by 2075), concentrations rise rapidly through this range. This means systemic biodiversity collapse, widespread food system failure, and potentially irreversible tipping cascades. The IPCC AR6 describes this as "very high risk" across all assessed sectors.`,
+    colour: '#922b21',
   };
 }
 
@@ -297,7 +299,7 @@ export function onboardingGuide() {
     <details class="facilitator-notes" open>
       <summary>How to run this game</summary>
       <div class="fn-body">
-        <p><strong>Overview:</strong> Students play as competing firms that manufacture "thingamabobs". Each round, firms choose how many to produce. Production generates profit but also CO₂ emissions. If total emissions exceed the threshold, a climate catastrophe is triggered.</p>
+        <p><strong>Overview:</strong> Students play as competing firms that manufacture "thingamabobs". Each round represents a medium-term production cycle. Over five rounds, the industry's cumulative emissions trace a path through the IPCC's Shared Socioeconomic Pathways — from today's baseline towards or beyond the Paris Agreement limits. If total emissions exceed the catastrophe threshold, a climate tipping point is breached.</p>
         <p><strong>Flow:</strong> The game runs through five regulatory regimes in sequence. After each regime, a structured debrief invites students to propose what they would change — then the next regime reveals the real-world answer.</p>
         <ol>
           <li><strong>Free Market</strong> — No rules. Students discover the tragedy of the commons.</li>
@@ -336,7 +338,7 @@ export function renderCO2Extra(ppm, config, prefix = '') {
     <div class="ppm-context-inline" style="border-top:1px solid ${ctx.colour}33;margin-top:0.75rem;padding-top:0.75rem;">
       <div class="ppm-context-level" style="color:${ctx.colour};font-weight:600;font-size:0.9rem;">${ctx.level}</div>
       <p style="font-size:0.85rem;margin:0.3rem 0 0.2rem;">${ctx.description}</p>
-      <div class="ppm-context-source">Source: IPCC AR6 Synthesis Report (2023)</div>
+      <div class="ppm-context-source">Sources: IPCC AR6 WG1 (2021); Meinshausen et al. (2020) SSP concentration pathways</div>
       ${catastropheHtml}
     </div>`;
 }

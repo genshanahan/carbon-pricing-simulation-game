@@ -9,8 +9,8 @@ export const DEFAULTS = {
   costPerUnit: 1,
   revenuePerUnit: 2,
   ppmPer1000: 2,
-  startPpm: 380,
-  triggerPpm: 450,
+  startPpm: 430,
+  triggerPpm: 500,
   taxRate: 0.80,
   /** Subset of {@link OPTIONAL_REGIMES} in canonical order (free market is always first). */
   enabledRegimes: ['cac', 'tax', 'trade', 'trademarket'],

@@ -187,7 +187,10 @@ function renderWelcome() {
       </div>
       <div class="info-box" style="background:#fafbfc;border:1px solid var(--border);margin-bottom:1.25rem;font-size:0.88rem;">
         <strong>Game rules:</strong> Each thingamabob costs $1 to produce, sells for $2, and generates
-        CO\u2082 emissions. If total emissions reach the catastrophe threshold, the climate tipping point
+        CO\u2082 emissions. Each round represents your firm\u2019s medium-term production plan. Over five
+        rounds, your industry\u2019s cumulative emissions trace a path through the IPCC\u2019s Shared
+        Socioeconomic Pathways (SSPs) \u2014 from today\u2019s baseline towards or beyond the Paris
+        Agreement limits. If total emissions reach the catastrophe threshold, the climate tipping point
         is breached. Each regime introduces a different approach to managing this tension between profit
         and the environment.
       </div>
@@ -784,7 +787,7 @@ function renderDebriefScreen() {
     <div class="efficiency-metric"${budgetCellStyle ? ` style="${budgetCellStyle}border-radius:0.5rem;padding:0.5rem;"` : ''}>
       <div class="efficiency-label">% of Safe Carbon Budget Used</div>
       <div class="efficiency-value">${formatBudgetUsed(budgetUsed)}</div>
-      <div class="efficiency-label"><i> (treating 450 ppm as the "safe" carbon budget)</i></div>
+      <div class="efficiency-label"><i> (treating ${config.triggerPpm} ppm as the "safe" carbon budget)</i></div>
     </div>
   </div>`;
 
