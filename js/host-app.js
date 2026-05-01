@@ -319,6 +319,7 @@ window.hostApp = {
     if (seq.includes(regime) && !state.regimeData[regime]) {
       state.regimeData[regime] = initRegimeData(state.config);
     }
+    ensureDefaultPermits(regime);
     delete roundFormErrorsByRegime[regime];
     delete tradeFormErrorsByRegime[regime];
     listenForSubmissions();
@@ -436,6 +437,7 @@ window.hostApp = {
     if (sessionRegimes().includes(next) && !state.regimeData[next]) {
       state.regimeData[next] = initRegimeData(state.config);
     }
+    ensureDefaultPermits(next);
     listenForSubmissions();
     sync();
   },
@@ -504,6 +506,40 @@ window.hostApp = {
     }
   },
 };
+
+/**
+ * Set default permits for permit-based regimes at creation time so the values
+ * are synced to Firebase (and visible to students) immediately — rather than
+ * relying on a render-time mutation in renderPermitAllocation.
+ */
+function ensureDefaultPermits(regime) {
+  if (regime !== 'trade' && regime !== 'trademarket') return;
+  const d = state && state.regimeData[regime];
+  if (!d) return;
+  const perFirm = defaultPermitsPerFirm(state.config);
+  d.firms.forEach(fd => { if (fd.permits === 0) fd.permits = perFirm; });
+}
+
+/**
+ * Build an effective firm-data object that accounts for pending clean-tech
+ * claims (from the RTDB cache) that haven't yet been baked into game state.
+ * Mirrors the student-side fdEff logic in play-app.js.
+ */
+function buildFdEff(regime, fd, i, config) {
+  const usesClean = regimeUsesCleanTech(regime);
+  const hasCT = usesClean && firmHasCleanTech(regime, i);
+  if (!hasCT) return fd;
+  const claimPending = !fd.cleanTech;
+  return {
+    ...fd,
+    cleanTech: true,
+    ...(claimPending ? {
+      capital: fd.capital - config.cleanTechCost,
+      totalProfit: fd.totalProfit - config.cleanTechCost,
+      cleanTechInvestment: config.cleanTechCost,
+    } : {}),
+  };
+}
 
 /**
  * Copy RTDB cleantech claims into state.regimeData[regime].firms[].cleanTech
@@ -975,13 +1011,12 @@ function renderProductionInput(regime, d, config) {
       <div class="prod-grid">
         ${state.firms.map((f, i) => {
           const fd = d.firms[i];
-          const hasCT = usesClean && firmHasCleanTech(regime, i);
-          const fdEff = hasCT ? { ...fd, cleanTech: true } : fd;
+          const fdEff = buildFdEff(regime, fd, i, config);
           const maxAllowed = maxAllowedProduction(fdEff, config, regime);
           const sub = currentSubmissions[i];
           const prefilledVal = sub ? sub.quantity : 0;
           const techBadge = usesClean ? cleanBadge(fdEff) : '';
-          let extraInfo = `Capital: ${fmtMoney(fd.capital)}`;
+          let extraInfo = `Capital: ${fmtMoney(fdEff.capital)}`;
           if (isCaC) extraInfo += ` | Cap: ${fmt(config.cacCap)}`;
           if (isTrade) {
             const pr = permitsRemaining(fdEff);

@@ -68,6 +68,10 @@ This game combines, adapts and extends three prior educational simulations:
 
 The first regime is a straightforward implementation of **The Thingamabob Game**, which gives students a simulated experience of the profit motive and how, without some form of regulation, profit maximization irrationally but irresistably drives catastrophic emissions. A simplified form of **The Carbon Emissions Game** (itself adapted from **The Pollution Game**) then walks students through the main forms of regulation designed to address this problem, again using the in-game competiton to simulate the structural dynamics of each approach. The simplification primarily entails stripping out detail regarding continuous marginal abatement cost curves in favour of a binary clean-technology toggle, keeping the arithmetic accessible to students without economics training while preserving the structural dynamics of each regulatory regime.
 
+## AI-assisted development
+
+The conception, design, and coding of this game were substantially supported by large language models via the [Cursor](https://cursor.com) IDE, including Claude Opus 4.6 and Sonnet 4.6 (Anthropic), GPT-5.4 (OpenAI), and Cursor Composer 2. This assistance spanned the game engine logic, Firebase integration, UI rendering, CSS styling, solo-mode AI strategies, and documentation. All pedagogical design decisions, game mechanics, theoretical framing, and final implementation choices were directed by the human author, who reviewed, tested, and takes responsibility for all code and content in this repository.
+
 ## How to cite
 
 > Shanahan, G. (2026). *The Carbon Pricing Simulation Game* [Web application]. Available at: [https://github.com/genshanahan/carbon-pricing-simulation-game](https://github.com/genshanahan/carbon-pricing-simulation-game)

@@ -23,4 +23,14 @@ See the project README for full citation details and links.
 
 ---
 
+AI-assisted development
+
+The software and documentation in this repository were substantially developed
+with the assistance of large language models via the Cursor IDE, including
+Claude Opus 4.6 and Sonnet 4.6 (Anthropic), GPT-5.4 (OpenAI), and Cursor
+Composer 2. The human author directed all design decisions and takes
+responsibility for the final work.
+
+---
+
 SPDX-License-Identifier: CC-BY-NC-SA-4.0
