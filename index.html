@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="https://app.secureprivacy.ai/script/69e3602f7a453f4e8d0d10a1.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script defer src="https://app.secureprivacy.ai/script/69e3602f7a453f4e8d0d10a1.js"></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-NJJES76EWQ"></script>
 <script>
@@ -26,6 +26,11 @@
 </header>
 
 <main id="main-content" class="container-narrow">
+  <noscript>
+    <div class="card">
+      <p>This game requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+    </div>
+  </noscript>
 
   <div class="card" id="landing">
     <h2>Welcome</h2>
@@ -41,7 +46,7 @@
         <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.75rem;">
           Create a new game room. Students will join on their phones.
         </p>
-        <button class="btn btn-primary btn-block" onclick="createNewRoom()">
+        <button class="btn btn-primary btn-block" onclick="createNewRoom(event)">
           Create Game Room
         </button>
       </div>
@@ -97,7 +102,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script type="module">
-import { generateRoomCode } from './js/ui-helpers.js';
+import { escHtml, generateRoomCode } from './js/ui-helpers.js?v=20260502';
 import { createRoom, roomExists, joinRoom } from './js/firebase-sync.js';
 import { buildConfig, createInitialState } from './js/game-engine.js';
 
@@ -111,8 +116,8 @@ if (presetRoom) {
   document.getElementById('joinCode').value = presetRoom;
 }
 
-window.createNewRoom = async function() {
-  const btn = event.target;
+window.createNewRoom = async function(event) {
+  const btn = event.currentTarget;
   btn.disabled = true;
   btn.textContent = 'Creating…';
   try {
@@ -156,7 +161,7 @@ function showFirmSelect(code, state) {
   container.innerHTML = state.firms.map((f, i) => `
     <button class="btn btn-outline btn-block" style="margin-bottom:0.5rem; border-color:var(--firm${i}); color:var(--firm${i});"
             onclick="selectFirm('${code}', ${i})">
-      ${f.name}
+      ${escHtml(f.name)}
     </button>
   `).join('');
 }

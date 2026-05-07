@@ -8,16 +8,16 @@ import {
   processRound, processPermitTrade, completeRegime, computeTotalEconomicOutput, computeBudgetUsed,
   defaultPermitsPerFirm, maxAllowedProduction, maxAffordable, maxProductionFromPermits,
   unitsPerPermit, permitsRemaining, totalTaxPaidByFirm, setCleanTech,
-  regimeSequence, nextRegimeAfter, roundProfitDetailForFirm,
+  regimeSequence, nextRegimeAfter, roundProfitDetailForFirm, normalizeStateFromRemote,
 } from './game-engine.js';
 
 import {
-  fmt, fmtMoney, renderCO2Meter, firmColor,
+  escHtml, fmt, fmtMoney, renderCO2Meter, firmColor,
   regimeUsesCleanTech, regimeUsesTax, regimeUsesPermits, regimeHasCap,
   regimeHasPermitMarket, regimeDescription, debriefPrompt,
   outputBudgetAnalogy, formatTotalEconomicOutput, formatBudgetUsed, budgetUsedStyle, facilitatorNotes,
   renderRoundHistory, renderCO2Extra, renderDiscussionCard, renderDiscussionFacilitatorHints, renderComparisonTable,
-} from './ui-helpers.js';
+} from './ui-helpers.js?v=20260502';
 
 import {
   PERSONALITIES, getPersonality,
@@ -41,6 +41,7 @@ const CHART_REGIME_COLORS = {
 
 /* ── State ── */
 
+const GAME_STORAGE_KEY = 'solo.gameState.v1';
 const PROPOSALS_STORAGE_KEY = 'solo.playerProposals';
 
 function loadStoredProposals() {
@@ -51,6 +52,65 @@ function loadStoredProposals() {
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
     return {};
+  }
+}
+
+function loadStoredGameState() {
+  try {
+    const raw = localStorage.getItem(GAME_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.state) return null;
+    const restoredState = normalizeStateFromRemote(parsed.state);
+    if (!restoredState) return null;
+    restoredState.config = buildConfig(restoredState.config);
+    return {
+      state: restoredState,
+      currentScreen: ['welcome', 'regime', 'debrief', 'results'].includes(parsed.currentScreen)
+        ? parsed.currentScreen
+        : 'regime',
+      playerProposals: parsed.playerProposals && typeof parsed.playerProposals === 'object' ? parsed.playerProposals : loadStoredProposals(),
+      cleanTechDecisionMade: parsed.cleanTechDecisionMade && typeof parsed.cleanTechDecisionMade === 'object' ? parsed.cleanTechDecisionMade : {},
+      submissionClampNotes: parsed.submissionClampNotes && typeof parsed.submissionClampNotes === 'object' ? parsed.submissionClampNotes : {},
+      proposalSavedAt: parsed.proposalSavedAt && typeof parsed.proposalSavedAt === 'object' ? parsed.proposalSavedAt : {},
+      calcSimCleanTech: !!parsed.calcSimCleanTech,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function hasStoredGameState() {
+  return loadStoredGameState() !== null;
+}
+
+function restoreStoredGameState() {
+  const saved = loadStoredGameState();
+  if (!saved) return false;
+  state = saved.state;
+  currentScreen = saved.currentScreen;
+  playerProposals = saved.playerProposals;
+  cleanTechDecisionMade = saved.cleanTechDecisionMade;
+  submissionClampNotes = saved.submissionClampNotes;
+  proposalSavedAt = saved.proposalSavedAt;
+  calcSimCleanTech = saved.calcSimCleanTech;
+  return true;
+}
+
+function persistGameState() {
+  if (!state) return;
+  try {
+    localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify({
+      state,
+      currentScreen,
+      playerProposals,
+      cleanTechDecisionMade,
+      submissionClampNotes,
+      proposalSavedAt,
+      calcSimCleanTech,
+    }));
+  } catch {
+    /* storage unavailable — silently degrade */
   }
 }
 
@@ -127,6 +187,12 @@ function startGame() {
   state.regime = 'freemarket';
   state.regimeData.freemarket = initRegimeData(config);
   currentScreen = 'regime';
+  playerProposals = {};
+  proposalSavedAt = {};
+  submissionErrors = {};
+  submissionClampNotes = {};
+  cleanTechDecisionMade = {};
+  calcSimCleanTech = false;
   render();
 }
 
@@ -149,6 +215,7 @@ function render() {
     requestAnimationFrame(() => mountResultsCharts());
   }
   renderNav();
+  persistGameState();
 }
 
 function renderNav() {
@@ -172,6 +239,11 @@ function renderNav() {
 /* ── Welcome screen ── */
 
 function renderWelcome() {
+  const resumeButton = hasStoredGameState()
+    ? `<button class="btn btn-outline btn-block" onclick="window.soloApp.resumeGame()" style="font-size:1.05rem;padding:0.75rem;margin-bottom:0.6rem;">
+        Resume Saved Game
+      </button>`
+    : '';
   return `
     <div class="card solo-welcome">
       <h2>Solo Play Demo</h2>
@@ -194,8 +266,9 @@ function renderWelcome() {
         is breached. Each regime introduces a different approach to managing this tension between profit
         and the environment.
       </div>
+      ${resumeButton}
       <button class="btn btn-primary btn-block" onclick="window.soloApp.startGame()" style="font-size:1.05rem;padding:0.75rem;">
-        Start Solo Game
+        ${resumeButton ? 'Start New Solo Game' : 'Start Solo Game'}
       </button>
     </div>`;
 }
@@ -262,8 +335,8 @@ function renderRegimeScreen() {
   }
 
   if (!roundDone && !cleanTechPending) {
-    const fd = d.firms[PLAYER_FIRM];
-    html += renderCalculator(regime, fd, config, d);
+    const playerFd = d.firms[PLAYER_FIRM];
+    html += renderCalculator(regime, playerFd, config, d);
   }
 
   if (roundDone) {
@@ -348,7 +421,7 @@ function renderPermitInfo(regime, d, config) {
           const fd = d.firms[i];
           const upp = unitsPerPermit(fd);
           return `<tr>
-            <td style="color:${firmColor(i)};font-weight:600;">${f.name}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
+            <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
             <td class="num">${fd.permits}</td>
             <td class="num">${fmt(upp)}</td>
             <td class="num">${fmt(fd.permits * upp)}</td>
@@ -581,7 +654,7 @@ function renderTradePanel(regime, d, config) {
       }
     }
     return `<tr>
-      <td style="color:${firmColor(i)};font-weight:600;">${f.name}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
+      <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
       <td class="num">${fmt(fd.permits)}</td>
       <td class="num">${fmt(pr)}</td>
       <td class="num">${fmtMoney(fd.capital)}</td>
@@ -590,7 +663,7 @@ function renderTradePanel(regime, d, config) {
   }).join('');
 
   const aiFirmOptions = state.firms
-    .map((f, i) => i !== PLAYER_FIRM ? `<option value="${i}">${f.name}</option>` : '')
+    .map((f, i) => i !== PLAYER_FIRM ? `<option value="${i}">${escHtml(f.name)}</option>` : '')
     .filter(Boolean).join('');
 
   const tradeLog = trades.length ? `<div class="trade-log" style="margin-top:0.75rem;">
@@ -598,8 +671,8 @@ function renderTradePanel(regime, d, config) {
     <table><thead><tr><th>#</th><th>Seller</th><th>Buyer</th><th class="num">Qty</th><th class="num">$/permit</th></tr></thead>
     <tbody>${trades.map((t, ti) => `<tr>
       <td>${ti + 1}</td>
-      <td style="color:${firmColor(t.seller)};">${state.firms[t.seller].name}</td>
-      <td style="color:${firmColor(t.buyer)};">${state.firms[t.buyer].name}</td>
+      <td style="color:${firmColor(t.seller)};">${escHtml(state.firms[t.seller].name)}</td>
+      <td style="color:${firmColor(t.buyer)};">${escHtml(state.firms[t.buyer].name)}</td>
       <td class="num">${fmt(t.quantity)}</td>
       <td class="num">${fmtMoney(t.price)}</td>
     </tr>`).join('')}</tbody></table>
@@ -701,7 +774,7 @@ function renderCompetitorCard(regime, d, config) {
 
     return `<div class="competitor-row" style="border-left-color:${firmColor(i)};">
       <div class="competitor-head">
-        <span class="competitor-name" style="color:${firmColor(i)};">${firm.name}</span>
+        <span class="competitor-name" style="color:${firmColor(i)};">${escHtml(firm.name)}</span>
         ${cleanChip}
       </div>
       <div class="competitor-stats">
@@ -732,6 +805,9 @@ function renderDebriefScreen() {
   const nextRegime = nextRegimeAfter(config, regime);
   const nextLabel = nextRegime === 'results' ? 'Final Results' : REGIME_LABELS[nextRegime];
   const isLast = nextRegime === 'results';
+  const seq = sessionRegimes();
+  const isRevisitingCompletedRegime = state.completedRegimes.includes(regime);
+  const allRegimesComplete = state.completedRegimes.filter(r => seq.includes(r)).length >= seq.length;
 
   let html = '';
 
@@ -760,7 +836,7 @@ function renderDebriefScreen() {
       ${state.firms.map((f, i) => {
         const fd = d.firms[i];
         return `<tr>
-          <td style="color:${firmColor(i)};font-weight:600;">${f.name}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
+          <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
           <td class="num">${fmt(fd.totalProduced)}</td>
           ${showTax ? `<td class="num">${fmtMoney(totalTaxPaidByFirm(d, i, config))}</td>` : ''}
           ${showPermit ? `<td class="num">${fmt(permitsRemaining(fd))}</td>` : ''}
@@ -804,18 +880,26 @@ function renderDebriefScreen() {
     <p style="font-size:0.88rem;margin-bottom:0.6rem;">${prompt.question}</p>
     ${prompt.hint ? `<p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.8rem;font-style:italic;">${prompt.hint}</p>` : ''}
     <textarea id="proposalText" rows="4" placeholder="Type your thoughts here (optional)&hellip;"
-              style="width:100%;resize:vertical;font-family:inherit;font-size:0.88rem;padding:0.6rem;border:1px solid var(--border);border-radius:0.5rem;">${existingProposal}</textarea>
+              style="width:100%;resize:vertical;font-family:inherit;font-size:0.88rem;padding:0.6rem;border:1px solid var(--border);border-radius:0.5rem;">${escHtml(existingProposal)}</textarea>
     <div style="margin-top:0.5rem;">
       <button class="btn btn-outline" onclick="window.soloApp.saveProposal('${regime}')">Save Response</button>
       <span id="proposalSaveStatus">${savedConfirmation}</span>
     </div>
   </div>`;
 
-  html += `<div class="card text-center mt-1">
-    <button class="btn btn-primary btn-block" onclick="window.soloApp.advanceRegime()" style="font-size:1rem;padding:0.7rem;">
-      ${isLast ? 'View Final Results' : `Continue to ${nextLabel}`} &rarr;
-    </button>
-  </div>`;
+  if (isRevisitingCompletedRegime) {
+    html += `<div class="card text-center mt-1">
+      <button class="btn btn-primary btn-block" onclick="${allRegimesComplete ? 'window.soloApp.viewResults()' : 'window.soloApp.goToNextIncompleteRegime()'}" style="font-size:1rem;padding:0.7rem;">
+        ${allRegimesComplete ? 'Return to Results' : 'Return to Next Regime'}
+      </button>
+    </div>`;
+  } else {
+    html += `<div class="card text-center mt-1">
+      <button class="btn btn-primary btn-block" onclick="window.soloApp.advanceRegime()" style="font-size:1rem;padding:0.7rem;">
+        ${isLast ? 'View Final Results' : `Continue to ${nextLabel}`} &rarr;
+      </button>
+    </div>`;
+  }
 
   return html;
 }
@@ -854,7 +938,7 @@ function renderResultsScreen() {
       const fd = state.regimeData[r].firms[i];
       return `<td class="num">${fmtMoney(fd.totalProfit)}</td>`;
     }).join('');
-    return `<tr><td style="color:${firmColor(i)};font-weight:600;">${f.name}${i === PLAYER_FIRM ? ' (You)' : ''}</td>${cells}</tr>`;
+    return `<tr><td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}${i === PLAYER_FIRM ? ' (You)' : ''}</td>${cells}</tr>`;
   }).join('');
 
   let proposalReview = '';
@@ -864,7 +948,7 @@ function renderResultsScreen() {
       <h3>Your Debrief Responses</h3>
       ${proposalEntries.map(([r, text]) => `<div class="proposal-card" style="border-left:3px solid ${firmColor(PLAYER_FIRM)};margin-bottom:0.5rem;">
         <div style="font-weight:600;font-size:0.85rem;">${REGIME_LABELS[r]}</div>
-        <div style="font-size:0.88rem;margin-top:0.25rem;">${text}</div>
+        <div style="font-size:0.88rem;margin-top:0.25rem;">${escHtml(text)}</div>
       </div>`).join('')}
     </div>`;
   }
@@ -881,7 +965,7 @@ function renderResultsScreen() {
         const pInfo = PERSONALITIES[p];
         return `<div style="display:flex;gap:0.75rem;align-items:flex-start;margin-bottom:0.75rem;padding:0.65rem;background:#fafbfc;border-radius:0.5rem;border-left:3px solid ${firmColor(i)};">
           <div>
-            <div style="font-weight:600;color:${firmColor(i)};">${f.name}</div>
+            <div style="font-weight:600;color:${firmColor(i)};">${escHtml(f.name)}</div>
             <div style="font-size:0.82rem;margin-top:0.15rem;"><strong>${pInfo.label}</strong></div>
             <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.25rem;">${pInfo.description}</div>
           </div>
@@ -954,7 +1038,13 @@ function destroyCharts() {
 }
 
 function mountResultsCharts() {
-  if (typeof Chart === 'undefined' || !state) return;
+  if (typeof Chart === 'undefined') {
+    document.querySelectorAll('.chart-wrap').forEach(el => {
+      el.innerHTML = '<div class="info-box warn">Charts could not be loaded. Check your internet connection.</div>';
+    });
+    return;
+  }
+  if (!state) return;
   const seq = sessionRegimes();
   const completed = state.completedRegimes.filter(r => seq.includes(r));
   if (completed.length === 0) return;
@@ -1041,6 +1131,15 @@ function mountResultsCharts() {
 window.soloApp = {
   startGame() {
     startGame();
+  },
+
+  resumeGame() {
+    if (!restoreStoredGameState()) {
+      alert('No saved solo game could be restored.');
+      return;
+    }
+    render();
+    window.scrollTo(0, 0);
   },
 
   claimCleanTech(regime, claim) {
@@ -1233,6 +1332,7 @@ window.soloApp = {
     playerProposals[regime] = textarea.value.trim();
     persistProposals();
     proposalSavedAt[regime] = true;
+    persistGameState();
     const status = document.getElementById('proposalSaveStatus');
     if (status) {
       status.innerHTML = `<span class="proposal-save-status" style="margin-left:0.6rem;font-size:0.82rem;color:var(--success,#2e7d32);">Response saved.</span>`;
@@ -1294,6 +1394,21 @@ window.soloApp = {
     render();
   },
 
+  goToNextIncompleteRegime() {
+    if (!state) return;
+    const next = sessionRegimes().find(r => !state.completedRegimes.includes(r));
+    if (!next) {
+      currentScreen = 'results';
+      render();
+      return;
+    }
+    state.regime = next;
+    if (!state.regimeData[next]) state.regimeData[next] = initRegimeData(state.config);
+    currentScreen = 'regime';
+    render();
+    window.scrollTo(0, 0);
+  },
+
   playAgain() {
     state = null;
     currentScreen = 'welcome';
@@ -1303,6 +1418,7 @@ window.soloApp = {
     submissionClampNotes = {};
     cleanTechDecisionMade = {};
     try { localStorage.removeItem(PROPOSALS_STORAGE_KEY); } catch { /* noop */ }
+    try { localStorage.removeItem(GAME_STORAGE_KEY); } catch { /* noop */ }
     render();
   },
 };

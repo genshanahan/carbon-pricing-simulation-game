@@ -8,14 +8,14 @@ import {
   totalTaxPaidByFirm, roundProfitDetailForFirm, computeTotalEconomicOutput, computeBudgetUsed,
 } from './game-engine.js';
 import {
-  onStateChange, submitDecision, registerStudent, submitProposal, claimCleanTech, onCleanTechClaims,
+  onStateChange, submitDecision, registerStudent, submitProposal, claimCleanTech, onCleanTechClaims, onConnectionChange,
 } from './firebase-sync.js';
 import {
-  fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge, regimeUsesCleanTech, regimeUsesTax,
+  escHtml, fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge, regimeUsesCleanTech, regimeUsesTax,
   regimeUsesPermits, regimeHasCap, regimeHasPermitMarket, regimeDescription, debriefPrompt,
   outputBudgetAnalogy, formatTotalEconomicOutput, formatBudgetUsed, budgetUsedStyle,
   renderRoundHistory, renderCO2Extra, renderDiscussionCard, renderComparisonTable,
-} from './ui-helpers.js';
+} from './ui-helpers.js?v=20260502';
 
 /* ── Globals ── */
 
@@ -30,6 +30,7 @@ let submissionClampNotes = {};
 let hasProposed = {};
 let submissionErrors = {};
 let submissionRecentlySaved = {};
+let isConnected = true;
 
 /** RTDB `cleantech/{regime}` snapshot (students listen here; host also mirrors into `state`). */
 const cleantechRemoteByRegime = {};
@@ -168,6 +169,11 @@ function activeRegimes() {
 async function init() {
   await registerStudent(ROOM, FIRM_ID);
 
+  onConnectionChange(connected => {
+    isConnected = connected;
+    render();
+  });
+
   onStateChange(ROOM, newState => {
     state = normalizeStateFromRemote(newState);
     if (!state) {
@@ -193,13 +199,16 @@ function render() {
 
   const firm = state.firms[FIRM_ID];
   if (firmNameEl) firmNameEl.textContent = firm ? firm.name : `Firm ${FIRM_ID + 1}`;
+  const connectionBanner = isConnected
+    ? ''
+    : '<div class="info-box warn" role="status">Connection lost — reconnecting...</div>';
 
   switch (state.regime) {
-    case 'setup': content.innerHTML = renderWaiting('The facilitator is setting up the game. Please wait…'); break;
-    case 'results': content.innerHTML = renderResults(); break;
+    case 'setup': content.innerHTML = connectionBanner + renderWaiting('The facilitator is setting up the game. Please wait…'); break;
+    case 'results': content.innerHTML = connectionBanner + renderResults(); break;
     default:
-      if (activeRegimes().includes(state.regime)) content.innerHTML = renderRegime(state.regime);
-      else content.innerHTML = renderWaiting('Waiting for the facilitator…');
+      if (activeRegimes().includes(state.regime)) content.innerHTML = connectionBanner + renderRegime(state.regime);
+      else content.innerHTML = connectionBanner + renderWaiting('Waiting for the facilitator…');
   }
 }
 
@@ -235,7 +244,7 @@ function renderRegime(regime) {
 
   html += `
     <div class="student-firm-header" style="border-color:${firmColor(FIRM_ID)};">
-      <div class="firm-name-large" style="color:${firmColor(FIRM_ID)};">${firm.name}</div>
+      <div class="firm-name-large" style="color:${firmColor(FIRM_ID)};">${escHtml(firm.name)}</div>
       ${usesClean ? `<div>${cleanBadge(fdEff)}</div>` : ''}
       <div class="firm-capital">${fmtMoney(fdEff.capital)}</div>
       <div style="font-size:0.82rem;color:var(--text-secondary);">Available capital</div>
@@ -617,7 +626,7 @@ function renderResults() {
 
   return `
     <div class="card">
-      <h2>Your Results: ${state.firms[FIRM_ID].name}</h2>
+      <h2>Your Results: ${escHtml(state.firms[FIRM_ID].name)}</h2>
       <table>
         <thead><tr><th>Regime</th><th class="num">Produced</th><th class="num">Profit</th><th class="num">Capital</th><th class="num">Safe?</th></tr></thead>
         <tbody>${rows}</tbody>

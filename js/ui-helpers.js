@@ -12,6 +12,15 @@ export function fmtMoney(n) {
   return '$' + n.toLocaleString('en-GB', { maximumFractionDigits: 0 });
 }
 
+export function escHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /**
  * PPM bands shown in the CO2 spectrum meter.
  * Boundaries align with the descriptions in `ppmContext()` and correspond to
@@ -113,34 +122,34 @@ export function ppmContext(ppm) {
   if (ppm < 450) {
     return {
       level: '2026 baseline — SSP1-2.6 territory',
-      description: `At ${fmt(ppm)} ppm, CO₂ concentration is near the real-world level as of 2026 (~430 ppm). Under SSP1-2.6 (low emissions, net zero by ~2075), concentrations stay in this range through mid-century before declining. Warming is approximately +1.1–1.2°C above pre-industrial levels. Effects already include more frequent heatwaves, intensifying storms, and accelerating coral bleaching.`,
+      description: `At ${fmt(ppm)} ppm, CO₂ concentration is near today's real-world level (~430 ppm). This is the world you already live in: climate change already causes roughly 400,000 excess deaths per year through heat, hunger, and disease. Under SSP1-2.6, concentrations stay in this range if emissions fall sharply and reach net zero by ~2075. Even this "best case" locks in +1.1–1.2°C of warming and the human toll it is already exacting.`,
       colour: '#27ae60',
     };
   }
   if (ppm < 470) {
     return {
       level: 'Approaching Paris 1.5°C limit — SSP2-4.5 boundary',
-      description: `At ${fmt(ppm)} ppm, warming is approaching +1.5°C — the aspirational limit of the Paris Agreement. Under SSP2-4.5 (the "current trajectory" scenario), concentrations pass through this range in the 2030s–2040s. Extreme weather events become significantly more frequent, small island nations face existential flooding risk, and crop yields begin to decline in tropical regions.`,
+      description: `At ${fmt(ppm)} ppm, warming approaches +1.5°C — the aspirational limit of the Paris Agreement. The step-change from today: an additional 1.7 billion people face severe heatwaves, heat-related mortality roughly doubles, and declining crop yields push tens of millions more into food insecurity. Under SSP2-4.5 ("current trajectory"), concentrations pass through this range in the 2030s–2040s. Staying below 1.5°C is still physically possible, but the window is closing fast.`,
       colour: '#f1c40f',
     };
   }
   if (ppm < 500) {
     return {
       level: 'Paris 2°C ceiling — SSP2-4.5 territory',
-      description: `At ${fmt(ppm)} ppm, warming approaches +2°C — the hard ceiling of the Paris Agreement. Under SSP2-4.5, concentrations reach this range by mid-century. Severe coral bleaching threatens 99% of reefs, Arctic summer sea ice disappears regularly, and ice sheet instability accelerates sea-level rise measurably.`,
+      description: `At ${fmt(ppm)} ppm, warming approaches +2°C — the hard ceiling of the Paris Agreement. The step-change from 1.5°C: up to 800 million more people exposed to hunger risk, vector-borne diseases like dengue and malaria expand into new regions affecting billions, and committed sea-level rise makes coastal cities home to hundreds of millions unviable long-term. The IPCC describes these as near-certain consequences at this level of warming.`,
       colour: '#e67e22',
     };
   }
   if (ppm < 550) {
     return {
       level: 'Beyond Paris — SSP3-7.0 territory',
-      description: `At ${fmt(ppm)} ppm, warming exceeds +2°C. Under SSP3-7.0 (regional rivalry, emissions double by 2100), concentrations pass through this range by mid-century. This means mass displacement from coastal flooding, severe stress on agricultural systems, and irreversible ice sheet loss.`,
+      description: `At ${fmt(ppm)} ppm, warming exceeds +2°C — beyond anything the Paris Agreement was designed to prevent. The step-change: hundreds of millions of people face displacement from coastal flooding and lethal heat, labour capacity falls sharply in tropical regions as outdoor work becomes physically dangerous for much of the year, and breakdowns in global food production drive humanitarian crises at a scale beyond current institutional capacity. Under SSP3-7.0, emissions double by 2100 and concentrations pass through this range by mid-century.`,
       colour: '#e74c3c',
     };
   }
   return {
     level: 'Catastrophic — SSP5-8.5 territory',
-    description: `At ${fmt(ppm)} ppm, warming approaches +3°C or higher. Under SSP5-8.5 (very high emissions, triple by 2075), concentrations rise rapidly through this range. This means systemic biodiversity collapse, widespread food system failure, and potentially irreversible tipping cascades. The IPCC AR6 describes this as "very high risk" across all assessed sectors.`,
+    description: `At ${fmt(ppm)} ppm, warming approaches +3°C or higher. The step-change: cascading tipping points begin driving warming independently of human action, large parts of the tropics become uninhabitable due to lethal wet-bulb temperatures, billions face water stress, and climate-driven mortality rivals that of major wars — sustained indefinitely. Under SSP5-8.5, the IPCC projects "very high risk" across every assessed sector, meaning systemic and irreversible harm to human health, food security, and livelihood across most of the world's population.`,
     colour: '#922b21',
   };
 }
@@ -395,7 +404,7 @@ export function renderRoundHistory(regime, d, firms, config, playerFirmIndex = n
     <table>
       <thead><tr>
         <th></th>
-        ${firms.map((f, i) => `<th class="num" style="color:${firmColor(i)};">${f.name}${i === playerFirmIndex ? ' (You)' : ''}<div class="sub-cell-note">Prod / Profit</div></th>`).join('')}
+        ${firms.map((f, i) => `<th class="num" style="color:${firmColor(i)};">${escHtml(f.name)}${i === playerFirmIndex ? ' (You)' : ''}<div class="sub-cell-note">Prod / Profit</div></th>`).join('')}
         <th class="num">Total</th>
         <th class="num">CO\u2082</th>
       </tr></thead>

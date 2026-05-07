@@ -19,13 +19,13 @@ import {
 } from './firebase-sync.js';
 
 import {
-  fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge,
+  escHtml, fmt, fmtMoney, renderCO2Meter, firmColor, cleanBadge,
   regimeUsesCleanTech, regimeUsesTax, regimeUsesPermits, regimeHasCap,
   regimeHasPermitMarket, qrCodeUrl, regimeDescription, debriefPrompt,
   outputBudgetAnalogy, formatTotalEconomicOutput, formatBudgetUsed, budgetUsedStyle,
   facilitatorNotes, onboardingGuide, renderRoundHistory, renderCO2Extra,
   renderDiscussionCard, renderDiscussionFacilitatorHints, renderComparisonTable,
-} from './ui-helpers.js';
+} from './ui-helpers.js?v=20260502';
 
 /* ── Globals ── */
 
@@ -79,7 +79,8 @@ function escAttr(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;');
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function parseWholeNumberInput(raw) {
@@ -91,7 +92,13 @@ function parseWholeNumberInput(raw) {
 }
 
 function mountResultsCharts() {
-  if (typeof Chart === 'undefined' || !state) return;
+  if (typeof Chart === 'undefined') {
+    document.querySelectorAll('.chart-wrap').forEach(el => {
+      el.innerHTML = '<div class="info-box warn">Charts could not be loaded. Check your internet connection.</div>';
+    });
+    return;
+  }
+  if (!state) return;
   const seq = sessionRegimes();
   const completed = state.completedRegimes.filter(r => seq.includes(r));
   if (completed.length === 0) return;
@@ -302,7 +309,7 @@ function renderConnectionDots() {
   if (!state || !connDotsEl) return;
   connDotsEl.innerHTML = state.firms.map((f, i) => {
     const connected = studentConnections[i] === true;
-    return `<span class="connection-dot ${connected ? 'connected' : ''}" title="${f.name}: ${connected ? 'connected' : 'disconnected'}"></span>`;
+    return `<span class="connection-dot ${connected ? 'connected' : ''}" title="${escAttr(f.name)}: ${connected ? 'connected' : 'disconnected'}"></span>`;
   }).join('');
 }
 
@@ -880,7 +887,7 @@ function renderCleanTechAssignment(regime, d) {
         ${state.firms.map((f, i) => {
           const hasCT = firmHasCleanTech(regime, i);
           return `<div class="prod-input-card">
-            <div class="firm-name" style="color:${firmColor(i)}">${f.name}</div>
+            <div class="firm-name" style="color:${firmColor(i)}">${escHtml(f.name)}</div>
             <label><input type="checkbox" ${hasCT ? 'checked' : ''}
                    onchange="window.hostApp.setCleanTech('${regime}', ${i}, this.checked)"> Clean Tech</label>
           </div>`;
@@ -893,7 +900,6 @@ function renderCleanTechAssignment(regime, d) {
 
 function renderPermitAllocation(regime, d, config) {
   const perFirm = defaultPermitsPerFirm(config);
-  d.firms.forEach(fd => { if (fd.permits === 0) fd.permits = perFirm; });
 
   return `
     <div class="card">
@@ -905,7 +911,7 @@ function renderPermitAllocation(regime, d, config) {
         ${state.firms.map((f, i) => {
           const fd = d.firms[i];
           return `<div class="prod-input-card">
-            <div class="firm-name" style="color:${firmColor(i)}">${f.name}</div>
+            <div class="firm-name" style="color:${firmColor(i)}">${escHtml(f.name)}</div>
             <label>Permits</label>
             <input type="number" min="0" value="${fd.permits}"
                    onchange="window.hostApp.setPermits('${regime}', ${i}, this.value)"
@@ -923,7 +929,7 @@ function renderPermitAllocation(regime, d, config) {
 /* ── Permit market ── */
 
 function renderPermitMarket(regime, d, config) {
-  const opts = state.firms.map((f, i) => `<option value="${i}">${f.name}</option>`).join('');
+  const opts = state.firms.map((f, i) => `<option value="${i}">${escHtml(f.name)}</option>`).join('');
   const trades = d.trades || [];
   const prices = trades.map(t => t.price);
   const totalVol = trades.reduce((s, t) => s + t.quantity, 0);
@@ -934,7 +940,7 @@ function renderPermitMarket(regime, d, config) {
     const fd = d.firms[i];
     const pr = permitsRemaining(fd);
     return `<tr>
-      <td style="color:${firmColor(i)};font-weight:600;">${f.name}</td>
+      <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}</td>
       <td class="num">${fmt(fd.permits)}</td>
       <td class="num">${fmt(pr)}</td>
       <td class="num">${fmtMoney(fd.capital)}</td>
@@ -943,8 +949,8 @@ function renderPermitMarket(regime, d, config) {
 
   const tradeRows = trades.map((t, ti) => `<tr>
     <td>${ti + 1}</td>
-    <td style="color:${firmColor(t.seller)};font-weight:600;">${state.firms[t.seller].name}</td>
-    <td style="color:${firmColor(t.buyer)};font-weight:600;">${state.firms[t.buyer].name}</td>
+    <td style="color:${firmColor(t.seller)};font-weight:600;">${escHtml(state.firms[t.seller].name)}</td>
+    <td style="color:${firmColor(t.buyer)};font-weight:600;">${escHtml(state.firms[t.buyer].name)}</td>
     <td class="num">${fmt(t.quantity)}</td>
     <td class="num">${fmtMoney(t.price)}</td>
     <td class="num">${fmtMoney(t.quantity * t.price)}</td>
@@ -959,7 +965,7 @@ function renderPermitMarket(regime, d, config) {
       <div class="two-col">
         <div class="form-group"><label>Seller</label><select id="tm-seller">${opts}</select></div>
         <div class="form-group"><label>Buyer</label>
-          <select id="tm-buyer">${state.firms.map((f, i) => `<option value="${i}" ${i === 1 ? 'selected' : ''}>${f.name}</option>`).join('')}</select>
+          <select id="tm-buyer">${state.firms.map((f, i) => `<option value="${i}" ${i === 1 ? 'selected' : ''}>${escHtml(f.name)}</option>`).join('')}</select>
         </div>
       </div>
       <div class="two-col">
@@ -1025,7 +1031,7 @@ function renderProductionInput(regime, d, config) {
           }
 
           return `<div class="prod-input-card" style="${sub ? 'border-color:var(--success);' : ''}">
-            <div class="firm-name" style="color:${firmColor(i)}">${f.name} ${techBadge}</div>
+            <div class="firm-name" style="color:${firmColor(i)}">${escHtml(f.name)} ${techBadge}</div>
             <div style="font-size:0.78rem;color:var(--text-secondary);">${extraInfo}</div>
             ${sub
               ? `<span class="submission-status received">Submitted: ${fmt(sub.quantity)}</span>`
@@ -1035,7 +1041,7 @@ function renderProductionInput(regime, d, config) {
           </div>`;
         }).join('')}
       </div>
-      ${roundError ? `<div class="form-error mt-1">${roundError}</div>` : ''}
+      ${roundError ? `<div class="form-error mt-1">${escHtml(roundError)}</div>` : ''}
       <div class="mt-1">
         <button class="btn btn-success btn-block" onclick="window.hostApp.submitRound('${regime}')">
           Submit Round ${roundNum}
@@ -1062,7 +1068,7 @@ function renderRegimeSummary(regime, d, config, nextRegime, nextLabel) {
     const taxCell = showTaxCol ? `<td class="num">${fmtMoney(totalTaxPaidByFirm(d, i, config))}</td>` : '';
     const permitCell = showPermitCol ? `<td class="num">${fmt(permitsRemaining(fd))}</td>` : '';
     return `<tr>
-      <td style="color:${firmColor(i)};font-weight:600;">${f.name}</td>
+      <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}</td>
       <td class="num">${fmt(fd.totalProduced)}</td>
       ${taxCell}
       ${permitCell}
@@ -1080,7 +1086,7 @@ function renderRegimeSummary(regime, d, config, nextRegime, nextLabel) {
     if (withUnused.length) {
       permitSummaryHtml = `
         <div class="info-box warn mt-1" style="font-size:0.88rem;">
-          <strong>Unused permits:</strong> ${withUnused.map(x => `${x.name} (${fmt(x.u)})`).join('; ')} finished with permits left unused.
+          <strong>Unused permits:</strong> ${withUnused.map(x => `${escHtml(x.name)} (${fmt(x.u)})`).join('; ')} finished with permits left unused.
         </div>`;
     } else {
       permitSummaryHtml = `
@@ -1145,8 +1151,8 @@ function renderRegimeSummary(regime, d, config, nextRegime, nextLabel) {
           const name = firm ? firm.name : `Firm ${parseInt(firmId) + 1}`;
           const color = firmColor(parseInt(firmId));
           return `<div class="proposal-card" style="border-left:3px solid ${color};">
-            <div style="font-weight:600;color:${color};font-size:0.85rem;">${name}</div>
-            <div style="font-size:0.88rem;margin-top:0.25rem;">${p.text || '<em>No text</em>'}</div>
+            <div style="font-weight:600;color:${color};font-size:0.85rem;">${escHtml(name)}</div>
+            <div style="font-size:0.88rem;margin-top:0.25rem;">${p.text ? escHtml(p.text) : '<em>No text</em>'}</div>
           </div>`;
         }).join('')
       : '<p style="font-size:0.85rem;color:var(--text-secondary);font-style:italic;">Waiting for student proposals…</p>';
@@ -1289,7 +1295,7 @@ function renderResults() {
       const fd = state.regimeData[r].firms[i];
       return `<td class="num">${fmtMoney(fd.totalProfit)}</td>`;
     }).join('');
-    return `<tr><td style="color:${firmColor(i)};font-weight:600;">${f.name}</td>${cells}</tr>`;
+    return `<tr><td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}</td>${cells}</tr>`;
   }).join('');
 
   return `

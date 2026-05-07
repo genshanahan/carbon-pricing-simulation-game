@@ -87,14 +87,6 @@ export const REGIME_LABELS = {
   trademarket: 'Cap & Trade',
 };
 
-export const REGIME_NAV_LABELS = {
-  freemarket: '1. Free Market',
-  cac: '2. Command & Control',
-  tax: '3. Carbon Tax',
-  trade: '4. Cap',
-  trademarket: '5. Cap & Trade',
-};
-
 /**
  * Normalise optional regime list: unknown ids removed, Cap & Trade implies Cap.
  * @param {unknown} raw
@@ -496,8 +488,9 @@ export function processPermitTrade(state, regime, seller, buyer, qty, price) {
   if (seller === buyer) return { error: 'Seller and buyer must be different firms.' };
   if (qty <= 0) return { error: 'Trade quantity must be positive.' };
   if (price < 0) return { error: 'Price cannot be negative.' };
-  if (sellerFd.permits < qty) {
-    return { error: `Seller does not hold enough permits (has ${sellerFd.permits}, needs ${qty}).` };
+  const available = permitsRemaining(sellerFd);
+  if (available < qty) {
+    return { error: `Seller does not have enough remaining permits (available ${available}, needs ${qty}).` };
   }
   const totalCost = qty * price;
   if (buyerFd.capital < totalCost) {

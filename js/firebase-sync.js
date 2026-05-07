@@ -78,6 +78,13 @@ export function onStateChange(roomCode, callback) {
   return () => ref.off('value');
 }
 
+export function onConnectionChange(callback) {
+  ensureInit();
+  const ref = db.ref('.info/connected');
+  ref.on('value', snap => callback(snap.val() === true));
+  return () => ref.off('value');
+}
+
 /* ── Student submissions (students write, facilitator reads) ── */
 
 export async function submitDecision(roomCode, regime, round, firmId, quantity) {
