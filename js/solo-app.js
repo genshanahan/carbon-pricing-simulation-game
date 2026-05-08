@@ -861,7 +861,7 @@ function renderDebriefScreen() {
     <div class="efficiency-metric">
       <div class="efficiency-label">Total Economic Output</div>
       <div class="efficiency-value">${formatTotalEconomicOutput(output)}</div>
-      <div class="efficiency-label">Firm profit + tax revenue</div>
+      <div class="efficiency-label">Revenue minus costs (tax washes out)</div>
     </div>
     <div class="efficiency-metric"${budgetCellStyle ? ` style="${budgetCellStyle}border-radius:0.5rem;padding:0.5rem;"` : ''}>
       <div class="efficiency-label">% of Safe Carbon Budget Used</div>
@@ -991,7 +991,7 @@ function renderResultsScreen() {
         <tbody>${crossRegimeRows}</tbody>
       </table>
       </div>
-      <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem;">Total Economic Output = firm profit + tax revenue collected by government. Budget Used = ppm added as a percentage of the safe carbon budget; values above 100% indicate overshoot of the catastrophe trigger.</p>
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem;">Total Economic Output = total revenue minus total costs. Tax washes out (it reduces firm profit but adds equally to government revenue). Differences between regimes are driven by production volume and clean-tech investment costs. Budget Used = ppm added as a percentage of the safe carbon budget; values above 100% indicate overshoot of the catastrophe trigger.</p>
     </div>
 
     <div class="card">

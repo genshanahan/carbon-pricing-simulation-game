@@ -17,49 +17,53 @@ export const DEFAULTS = {
 };
 
 /**
- * Derive session parameters that must stay calibrated to the pedagogical model.
+ * Per-firm-count calibration parameters, verified by greedy-play simulation
+ * to produce the strict ILO ordering C&C < Tax < Cap < C&T at 5 rounds.
+ *
+ * - **cacCapMultiplier**: C&C cap as fraction of safe-max per firm per round.
+ * - **cleanTechFraction**: clean-tech sunk cost as fraction of startCapital.
+ * - **permitsPerFirm**: calibrated so that (a) the Cap regime avoids
+ *   catastrophe under greedy play, and (b) clean-tech firms retain enough
+ *   surplus permits for C&T trading to generate a visible TEO advantage.
+ *
+ * Permits may exceed the even-share safe budget because greedy play is the
+ * maximum-production (and maximum-ppm) strategy: any sub-optimal play
+ * produces fewer units and lower ppm, so if Cap avoids catastrophe under
+ * greedy play it avoids it under all strategies. C&T may trigger catastrophe
+ * because trading enables more complete permit utilisation — a genuine
+ * economic insight about how cap levels interact with trading.
+ */
+const FIRM_CALIBRATION = {
+  3: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 16 },
+  4: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 11 },
+  5: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 10 },
+  6: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 8 },
+  7: { cacCapMultiplier: 0.25, cleanTechFraction: 0.85, permitsPerFirm: 6 },
+  8: { cacCapMultiplier: 0.25, cleanTechFraction: 0.88, permitsPerFirm: 6 },
+};
+
+/**
+ * Derive session parameters calibrated to the pedagogical model.
  *
  * **startCapital** — Set so that unconstrained free-market production triggers
- * catastrophe at roughly 60 % of the way through the regime (e.g. round 3 of 5).
+ * catastrophe at roughly 60 % of the way through the regime (round 3 of 5).
  *
- * **cleanTechCost** — Sunk, one-off investment deducted at the moment a firm
- * chooses clean technology (before any production). Set at 65 % of startCapital
- * so that in the Carbon Tax regime clean-tech firms are visibly behind in
- * rounds 1–3, then overtake standard firms from round 4. In Cap / Cap & Trade,
- * the sunk cost makes clean-tech firms capital-constrained, leaving them with
- * slack permits to sell to permit-constrained standard firms — delivering the
- * neoclassical efficiency-of-trade result. The 65 % fraction (vs an earlier
- * 60 %) deepens the capital constraint on clean-tech firms in permit regimes,
- * roughly doubling their surplus permits and widening the Cap vs Cap & Trade
- * efficiency gap.
+ * **cleanTechCost** — Sunk cost set per-firm-count via {@link FIRM_CALIBRATION}.
+ * High enough that clean-tech firms are deeply capital-constrained in permit
+ * regimes, generating surplus permits for C&T trading. In the Tax regime the
+ * sunk cost creates a visible "short-term pain, long-term gain" arc.
  *
- * Default arithmetic (5 firms, 5 rounds, startCapital $1,000, verified numerically):
- *   cleanTechCost = $650. After investment, clean-tech starts with $350 of
- *   working capital vs. $1,000 for standard firms.
- *   Tax (greedy): cumulative profit clean < standard through R3 (R1: −$440,
- *     R2: −$104), clean overtakes at R4 (+$220), wide lead at R5
- *     (+$1,181). Delivers the "short-term pain, long-term gain" narrative.
- *   Cap (greedy): standard firms exhaust their 7-permit allocation by R3;
- *     clean-tech firms end R5 with ~1.6 permits unused (capital-constrained,
- *     not permit-constrained).
- *   Cap & Trade: clean-tech firms remain capital-constrained throughout, so
- *     their reservation price for surplus permits is $0. Standard firms
- *     become permit-constrained from R3–R4 and are willing to pay up to the
- *     gross permit value (1 permit × 1,000 units × $1/unit = $1,000; $1,200
- *     with aggressive-AI 20 % premium). Equilibrium trading price lands
- *     between these two anchors.
- *
- * **cacCap** (in buildConfig) — The C&C per-firm-per-round cap is set at 75 %
- * of the theoretical maximum safe output parcelled evenly. This models the
- * informational constraint facing regulators: lacking firm-level cost data,
- * they set a precautionary cap below the optimum, producing visible deadweight
- * loss that motivates the efficiency critique of command-and-control.
+ * **cacCap** (applied in buildConfig) — Set at 25 % of the theoretical maximum
+ * safe output per firm per round. Models the informational constraint facing
+ * regulators: lacking firm-level cost data, they set a precautionary cap well
+ * below the optimum, producing visible deadweight loss.
  *
  * **maxCleanTech** — ~40 % of firms (at least 1): enough for heterogeneity
  * without making clean tech the majority.
  *
- * **permitsPerFirm** — Derived so that permit-based production is strictly less
- * than what firms could afford, ensuring permits are a binding constraint.
+ * **permitsPerFirm** — Per-firm-count values from {@link FIRM_CALIBRATION}
+ * ensure permits are a binding constraint for standard firms while leaving
+ * clean-tech firms with tradeable surplus.
  */
 export function deriveSessionParams(numFirms, numRounds, opts = {}) {
   const ppmPer1000 = opts.ppmPer1000 ?? DEFAULTS.ppmPer1000;
@@ -72,14 +76,19 @@ export function deriveSessionParams(numFirms, numRounds, opts = {}) {
     (numFirms * (Math.pow(2, targetRound) - 1) * ppmPer1000);
   const startCapital = Math.ceil(exactC / 50) * 50;
 
-  const cleanTechCost = Math.round(startCapital * 0.65);
+  const cal = FIRM_CALIBRATION[numFirms];
+  const cleanTechFraction = cal ? cal.cleanTechFraction : 0.91;
+  const cleanTechCost = Math.round(startCapital * cleanTechFraction);
   const maxCleanTech = Math.max(1, Math.floor(numFirms * 0.4));
 
   const maxThingamabobs = (ppmBudget / ppmPer1000) * 1000;
-  const permitsPerFirm = Math.max(1,
-    Math.floor(Math.floor(maxThingamabobs / 1000) / numFirms));
+  const permitsPerFirm = cal
+    ? cal.permitsPerFirm
+    : Math.max(1, Math.floor(Math.floor(maxThingamabobs / 1000) / numFirms));
 
-  return { startCapital, cleanTechCost, maxCleanTech, permitsPerFirm };
+  const cacCapMultiplier = cal ? cal.cacCapMultiplier : 0.25;
+
+  return { startCapital, cleanTechCost, maxCleanTech, permitsPerFirm, cacCapMultiplier };
 }
 
 /** Full canonical order (free market + optional chain). */
@@ -136,13 +145,14 @@ export function buildConfig(overrides = {}) {
   c.numFirms = Math.max(3, Math.min(8, Math.round(Number(c.numFirms) || DEFAULTS.numFirms)));
   c.numRounds = Math.max(3, Math.min(7, Math.round(Number(c.numRounds) || DEFAULTS.numRounds)));
   const derived = deriveSessionParams(c.numFirms, c.numRounds, c);
-  c.startCapital  = derived.startCapital;
-  c.cleanTechCost = derived.cleanTechCost;
-  c.maxCleanTech  = derived.maxCleanTech;
+  c.startCapital   = derived.startCapital;
+  c.cleanTechCost  = derived.cleanTechCost;
+  c.maxCleanTech   = derived.maxCleanTech;
+  c.permitsPerFirm = derived.permitsPerFirm;
 
   c.profitPerUnit = c.revenuePerUnit - c.costPerUnit;
   c.maxThingamabobs = (c.triggerPpm - c.startPpm) / c.ppmPer1000 * 1000;
-  c.cacCap = Math.floor(c.maxThingamabobs * 0.75 / (c.numFirms * c.numRounds));
+  c.cacCap = Math.floor(c.maxThingamabobs * derived.cacCapMultiplier / (c.numFirms * c.numRounds));
   return Object.freeze(c);
 }
 
@@ -409,6 +419,7 @@ export function roundProfitDetailForFirm(regime, config, fd, productionQty) {
 }
 
 export function defaultPermitsPerFirm(config) {
+  if (config.permitsPerFirm != null) return config.permitsPerFirm;
   const totalSafe = Math.floor(config.maxThingamabobs / 1000);
   return Math.floor(totalSafe / config.numFirms);
 }
@@ -549,9 +560,12 @@ export function completeRegime(state, regime) {
  * degenerate number, and without encoding a particular normative weighting.
  */
 
-/* Total economic output: firm profit + tax revenue. Tax revenue counts
- * because it represents output value redirected to the public sector, not
- * output destroyed. Returns null when no rounds have been played. */
+/* Total economic output: total revenue minus total costs (production costs +
+ * clean-tech investment). Computed as firm profit + tax revenue, but the tax
+ * terms cancel algebraically (profit = revenue - cost - tax, so profit + tax
+ * = revenue - cost). The only drivers of TEO differences across regimes are
+ * total units produced and clean-tech sunk costs.
+ * Returns null when no rounds have been played. */
 export function computeTotalEconomicOutput(state, regime) {
   const d = state.regimeData[regime];
   if (!d || d.rounds.length === 0) return null;

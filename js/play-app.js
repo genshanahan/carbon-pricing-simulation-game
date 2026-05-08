@@ -216,6 +216,21 @@ function renderWaiting(msg) {
   return `<div class="waiting-indicator"><div class="spinner"></div><p>${msg}</p></div>`;
 }
 
+/** Mirrors host `renderIndustryTotals` so student devices show the same class-wide snapshot as the facilitator. */
+function renderStudentIndustryTotals(regime, d, config) {
+  const totalProfit = d.firms.reduce((s, f) => s + f.totalProfit, 0);
+  const roundsRemaining = Math.max(0, config.numRounds - d.currentRound);
+  return `
+    <div class="card industry-totals-card">
+      <h3>Industry snapshot</h3>
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.5rem;">Class-wide figures (same data as on the projected screen).</p>
+      <div class="stat-row"><span class="stat-label">Regime</span><span class="stat-value">${REGIME_LABELS[regime]}</span></div>
+      <div class="stat-row"><span class="stat-label">Total industry profit</span><span class="stat-value">${fmtMoney(totalProfit)}</span></div>
+      <div class="stat-row"><span class="stat-label">Current CO\u2082 concentration</span><span class="stat-value">${fmt(d.ppm)} ppm</span></div>
+      <div class="stat-row"><span class="stat-label">Rounds remaining</span><span class="stat-value">${fmt(roundsRemaining)}</span></div>
+    </div>`;
+}
+
 /* ── Regime view ── */
 
 function renderRegime(regime) {
@@ -258,9 +273,8 @@ function renderRegime(regime) {
     </div>
   `;
 
-  if (!roundDone) {
-    html += renderCO2Meter(d.ppm, config, renderCO2Extra(d.ppm, config));
-  }
+  html += renderCO2Meter(d.ppm, config, renderCO2Extra(d.ppm, config));
+  html += renderStudentIndustryTotals(regime, d, config);
 
   if (isTrade) {
     const pr = permitsRemaining(fdEff);
@@ -571,7 +585,7 @@ function renderFirmSummary(regime, d, fd) {
       <div class="efficiency-metric">
         <div class="efficiency-label">Total Economic Output</div>
         <div class="efficiency-value">${formatTotalEconomicOutput(output)}</div>
-        <div class="efficiency-label">Firm profit + tax revenue</div>
+        <div class="efficiency-label">Revenue minus costs (tax washes out)</div>
       </div>
       <div class="efficiency-metric"${budgetCellStyle ? ` style="${budgetCellStyle}border-radius:0.5rem;padding:0.5rem;"` : ''}>
         <div class="efficiency-label">% of Safe Carbon Budget Used</div>
@@ -588,7 +602,6 @@ function renderFirmSummary(regime, d, fd) {
       ${extraRows}
       <div class="stat-row"><span class="stat-label">Catastrophe?</span><span class="stat-value">${d.catastrophe ? 'Yes' : 'No'}</span></div>
     </div>
-    ${renderCO2Meter(d.ppm, config, renderCO2Extra(d.ppm, config))}
     ${efficiencyHtml}`;
 }
 
@@ -640,7 +653,7 @@ function renderResults() {
         <tbody>${crossRegimeRows}</tbody>
       </table>
       </div>
-      <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem;">Total Economic Output = firm profit + tax revenue collected by government. Budget Used = ppm added as a percentage of the safe carbon budget; values above 100% indicate overshoot of the catastrophe trigger.</p>
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem;">Total Economic Output = total revenue minus total costs. Tax washes out (it reduces firm profit but adds equally to government revenue). Differences between regimes are driven by production volume and clean-tech investment costs. Budget Used = ppm added as a percentage of the safe carbon budget; values above 100% indicate overshoot of the catastrophe trigger.</p>
     </div>
     <div class="kuznets-reflection">
       <h3>What did we produce?</h3>

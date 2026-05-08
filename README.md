@@ -4,7 +4,7 @@ An interactive classroom simulation of five carbon regulation regimes — from f
 
 **[Try the solo demo](https://genshanahan.github.io/carbon-pricing-simulation-game/solo.html)** — no setup required. Play through all five regimes against computer-simulated firms in your browser.
 
-**[Launch the facilitated version](https://genshanahan.github.io/carbon-pricing-simulation-game/)** — requires a free Firebase project for real-time sync between devices. See [SETUP.md](SETUP.md) for instructions.
+**[Launch the facilitated version](https://genshanahan.github.io/carbon-pricing-simulation-game/)** — no setup required. Click **Create Game Room** and share the room code or QR code with students. (To run your own independent instance instead, see [SETUP.md](SETUP.md).)
 
 ## Why this game exists
 
@@ -40,13 +40,13 @@ By the end of the session, students will have experienced:
 
 ### Facilitated mode (classroom)
 
-The primary mode. A facilitator projects the host view on a classroom screen; students join on their phones by scanning a QR code or entering a room code. The facilitator drives the game through the five regimes, entering production decisions and processing rounds. Students see regime rules, use built-in calculators to plan strategy, and submit decisions from their devices. Real-time sync is handled automatically — no accounts, downloads, or technical setup required.
+The primary mode. A facilitator projects the host view on a classroom screen; students join on their phones by scanning a QR code or entering a room code. The facilitator drives the game through the five regimes, entering production decisions and processing rounds. Students see regime rules, the same **CO₂** concentration tracker and class-wide **industry snapshot** (profit, ppm, rounds remaining) as the projected view, built-in calculators to plan strategy, and submit decisions from their devices. Real-time sync is handled automatically — no accounts, downloads, or technical setup required.
 
 **To run a session:** Open the [landing page](https://genshanahan.github.io/carbon-pricing-simulation-game/), click **Create Game Room**, and share the room code or QR code with students. See **[SETUP.md](SETUP.md)** for full details.
 
 **Duration:** ~90 minutes (game + debriefs), though this varies with class size and discussion depth.
 
-**Class size:** Designed for 3–8 firms of 1–3 students each. The facilitator can adjust the number of firms and rounds per regime at game creation.
+**Class size:** Designed for 3–8 firms of 1–3 students each. The facilitator can adjust the number of firms at game creation; each regime runs for 5 rounds (fixed to preserve calibrated learning outcomes).
 
 **Self-hosting:** If you want to run your own independent instance, you can fork the repository and set up your own Firebase project. See **[SETUP.md](SETUP.md)** for instructions.
 

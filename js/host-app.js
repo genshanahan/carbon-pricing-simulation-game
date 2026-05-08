@@ -487,7 +487,6 @@ window.hostApp = {
   applySessionConfig() {
     if (!state || state.gameStarted) return;
     const numFirms = Math.max(3, Math.min(8, parseInt(document.getElementById('cfg-num-firms')?.value, 10) || 5));
-    const numRounds = Math.max(3, Math.min(7, parseInt(document.getElementById('cfg-num-rounds')?.value, 10) || 5));
     const enabled = [];
     for (const r of OPTIONAL_REGIMES) {
       const el = document.getElementById(`cfg-regime-${r}`);
@@ -496,7 +495,7 @@ window.hostApp = {
     const nextCfg = buildConfig({
       ...state.config,
       numFirms,
-      numRounds,
+      numRounds: 5,
       enabledRegimes: enabled,
     });
     state.config = nextCfg;
@@ -681,7 +680,7 @@ function renderSetup() {
   const derived = deriveSessionParams(state.config.numFirms, state.config.numRounds, state.config);
   const derivedSummary = `
     <div class="info-box accent" style="margin-top:0.75rem;font-size:0.84rem;">
-      <strong>Auto-tuned parameters</strong> (calibrated from your firm/round choices)
+      <strong>Auto-tuned parameters</strong> (calibrated from the number of firms)
       <div style="margin-top:0.5rem;">
         <div class="stat-row" style="border-bottom:1px solid rgba(0,0,0,0.06);"><span class="stat-label">Starting capital</span><span class="stat-value">${fmtMoney(derived.startCapital)}</span></div>
         <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.35rem;margin-top:0.15rem;">Set so free-market growth triggers catastrophe before the final round</div>
@@ -700,16 +699,13 @@ function renderSetup() {
       <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">
         Set these before you begin Round 1. Once the game starts, session options are locked (use <strong>Reset game</strong> to change them).
       </p>
-      <div class="two-col">
-        <div class="form-group">
-          <label for="cfg-num-firms">Number of firms</label>
-          <input type="number" id="cfg-num-firms" min="3" max="8" value="${state.config.numFirms}" step="1" inputmode="numeric" pattern="[0-9]*">
-        </div>
-        <div class="form-group">
-          <label for="cfg-num-rounds">Rounds per regime</label>
-          <input type="number" id="cfg-num-rounds" min="3" max="7" value="${state.config.numRounds}" step="1" inputmode="numeric" pattern="[0-9]*">
-        </div>
+      <div class="form-group">
+        <label for="cfg-num-firms">Number of firms</label>
+        <input type="number" id="cfg-num-firms" min="3" max="8" value="${state.config.numFirms}" step="1" inputmode="numeric" pattern="[0-9]*">
       </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin:0.25rem 0 0.75rem;">
+        Each regime runs for 5 rounds. Parameters are auto-calibrated from the number of firms.
+      </p>
       <fieldset class="regime-toggle-fieldset">
         <legend>Regimes after free market</legend>
         <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.5rem;">
@@ -727,7 +723,7 @@ function renderSetup() {
     <div class="card">
       <h2>Session options (locked)</h2>
       <p style="font-size:0.88rem;color:var(--text-secondary);">
-        ${state.config.numFirms} firms, ${state.config.numRounds} rounds per regime, starting capital ${fmtMoney(state.config.startCapital)}.
+        ${state.config.numFirms} firms, 5 rounds per regime, starting capital ${fmtMoney(state.config.startCapital)}.
         Regimes: ${seq.map(r => REGIME_LABELS[r]).join(' \u2192 ')}.
       </p>
       ${derivedSummary}
@@ -1093,7 +1089,7 @@ function renderRegimeSummary(regime, d, config, nextRegime, nextLabel) {
       <div class="efficiency-metric">
         <div class="efficiency-label">Total Economic Output</div>
         <div class="efficiency-value">${formatTotalEconomicOutput(output)}</div>
-        <div class="efficiency-label">Firm profit + tax revenue</div>
+        <div class="efficiency-label">Revenue minus costs (tax washes out)</div>
       </div>
       <div class="efficiency-metric"${budgetCellStyle ? ` style="${budgetCellStyle}border-radius:0.5rem;padding:0.5rem;"` : ''}>
         <div class="efficiency-label">% of Safe Carbon Budget Used</div>
@@ -1294,7 +1290,7 @@ function renderResults() {
         <thead><tr><th>Regime</th><th class="num">Total Prod.</th><th class="num">Final ppm</th><th class="num">Catastrophe?</th><th class="num">Total Economic Output</th><th class="num">Budget Used</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem;">Total Economic Output = firm profit + tax revenue collected by government. Budget Used = ppm added as a percentage of the safe carbon budget; values above 100% indicate overshoot of the catastrophe trigger.</p>
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.5rem;">Total Economic Output = total revenue minus total costs. Tax washes out (it reduces firm profit but adds equally to government revenue). Differences between regimes are driven by production volume and clean-tech investment costs. Budget Used = ppm added as a percentage of the safe carbon budget; values above 100% indicate overshoot of the catastrophe trigger.</p>
     </div>
 
     <div class="card">
