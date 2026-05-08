@@ -41,7 +41,7 @@ export function renderCO2Meter(ppm, config, extra) {
   const meterMin = config.startPpm;
   const meterMax = Math.max(560, ppm + 20, config.triggerPpm + 60);
   const span = Math.max(1, meterMax - meterMin);
-  const danger = ppm >= config.triggerPpm;
+  const danger = ppm > config.triggerPpm;
 
   let prev = meterMin;
   const bands = [];
@@ -229,7 +229,7 @@ export function facilitatorNotes(regime) {
         'Students will notice they can\'t exceed the cap even if they have capital to spare.',
       ],
       expectedDynamics: [
-        'Production will be uniform across all firms (all at the cap).',
+        'Production will be at or near the cap for every firm in every round \u2014 all firms face the same ceiling.',
         'Total profit will be lower than the free market, but catastrophe may be avoided.',
         'Some students may complain about the inflexibility — this is pedagogically valuable.',
       ],
@@ -337,7 +337,7 @@ export function onboardingGuide() {
 export function renderCO2Extra(ppm, config, prefix = '') {
   const ctx = ppmContext(ppm);
   const fmt2 = (n) => n.toLocaleString('en-GB', { maximumFractionDigits: 1 });
-  const catastropheHtml = ppm >= config.triggerPpm
+  const catastropheHtml = ppm > config.triggerPpm
     ? `<div style="margin-top:0.6rem;padding:0.5rem 0.75rem;background:#fde8e8;border-radius:0.4rem;border-left:3px solid #c0392b;">
         <strong style="color:#c0392b;">Catastrophe threshold breached</strong>
         <p style="font-size:0.83rem;margin:0.2rem 0 0;">Emissions exceeded the safe limit of <strong>${fmt2(config.triggerPpm)} ppm</strong>. Firms may continue producing under this regime, mirroring how real-world economies continue operating after overshooting climate targets.</p>
@@ -435,7 +435,10 @@ export function regimeDescription(regime, config) {
  * Canonical Discussion card shown on the Results screen in all three apps.
  * Uses config.triggerPpm for the Material Viability bullet.
  */
-export function renderDiscussionCard(config) {
+export function renderDiscussionCard(config, showHints = false) {
+  const hint = (text) => showHints
+    ? `<ul style="list-style:none;padding-left:0.5rem;margin:0.15rem 0 0.4rem;"><li style="font-style:italic;font-size:0.82rem;color:var(--text-secondary);">${text}</li></ul>`
+    : '';
   return `
     <div class="card">
       <h2>Discussion</h2>
@@ -463,7 +466,9 @@ export function renderDiscussionCard(config) {
           <li>Which approach was most vulnerable to gaming, lobbying, and manipulation?</li>
           <li>If firms can lobby to weaken the cap, or the tax is set too low because of political pressure, can any pricing mechanism actually work as designed?</li>
           <li>Is command-and-control always necessarily bureaucratic and inefficient? Can you think of regulations that could be set directly by governments that would be effective?</li>
+          ${hint('e.g. \u201cchoice editing\u201d that removes high-emission options from the market entirely')}
           <li>What sustainability transition challenges are <em>not</em> represented in the game?</li>
+          ${hint('e.g. political lobbying related to sunk-cost investments; financialisation of permits through second-order trading, betting, hedging, and speculation; distributive implications')}
         </ul>
       </div>
       <div class="debrief-box" style="background:#f4f4f4;border-color:#bbb;">
@@ -471,7 +476,9 @@ export function renderDiscussionCard(config) {
         <ul>
           <li>This game was calibrated to tell a specific story about economically efficient regulation. What assumptions did the game\u2019s design build in, and how do those assumptions shape the conclusions you are likely to draw?</li>
           <li>The game focuses attention on the relative <em>flexibility</em> of different policies. Is flexibility always desirable? Or are there cases where rigid rules produce better outcomes?</li>
+          ${hint('Consider cases where rigid rules (bans, standards) produce more equitable outcomes than market mechanisms')}
           <li>What are the relative advantages and disadvantages of the three carbon pricing regimes in terms of <strong>uncertainty</strong> regarding: existing and future technological developments; climate dynamics; political and economic dynamics?</li>
+          ${hint('Prompt students to distinguish between technological, climate-science, and political-economic uncertainty, and consider which regime handles each best/worst')}
         </ul>
       </div>
     </div>`;
@@ -483,23 +490,7 @@ export function renderDiscussionCard(config) {
  * @param {string} label - "Educator" for solo-app, "Facilitator" for host-app
  */
 export function renderDiscussionFacilitatorHints(label) {
-  const title = label || 'Educator';
-  return `
-    <details class="facilitator-notes">
-      <summary>${title} Discussion Notes</summary>
-      <div class="fn-body">
-        <p><strong>Political Feasibility prompts:</strong></p>
-        <ul>
-          <li><em>\u201cCan you think of effective government-set regulations?\u201d</em> \u2014 e.g. \u201cchoice editing\u201d that removes high-emission options from the market entirely (cf. 1.5-degree lifestyle report)</li>
-          <li><em>\u201cWhat transition challenges are not represented?\u201d</em> \u2014 e.g. political lobbying related to sunk-cost investments in fossil fuel / clean tech infrastructure; financialisation of permits through second-order trading, betting, hedging, and speculation; normative considerations re: distributive implications of different regimes</li>
-        </ul>
-        <p><strong>Ideological Artefact prompts:</strong></p>
-        <ul>
-          <li><em>\u201cIs flexibility always desirable?\u201d</em> \u2014 consider cases where rigid rules (bans, standards) produce more equitable outcomes than market mechanisms</li>
-          <li><em>\u201cUncertainty across regimes\u201d</em> \u2014 prompt students to distinguish between technological uncertainty, climate-science uncertainty, and political-economic uncertainty, and consider which regime handles each best/worst</li>
-        </ul>
-      </div>
-    </details>`;
+  return '';
 }
 
 /**

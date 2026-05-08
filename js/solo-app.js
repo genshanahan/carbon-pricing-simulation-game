@@ -980,7 +980,7 @@ function renderResultsScreen() {
     <p>The Total Economic Output figure above does not distinguish between these. Should it?</p>
   </div>`;
 
-  const discussionHtml = renderDiscussionCard(config);
+  const discussionHtml = renderDiscussionCard(config, true);
 
   return `
     <div class="card">

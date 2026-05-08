@@ -23,21 +23,24 @@ export const DEFAULTS = {
  * catastrophe at roughly 60 % of the way through the regime (e.g. round 3 of 5).
  *
  * **cleanTechCost** — Sunk, one-off investment deducted at the moment a firm
- * chooses clean technology (before any production). Set at 60 % of startCapital
+ * chooses clean technology (before any production). Set at 65 % of startCapital
  * so that in the Carbon Tax regime clean-tech firms are visibly behind in
  * rounds 1–3, then overtake standard firms from round 4. In Cap / Cap & Trade,
  * the sunk cost makes clean-tech firms capital-constrained, leaving them with
  * slack permits to sell to permit-constrained standard firms — delivering the
- * neoclassical efficiency-of-trade result.
+ * neoclassical efficiency-of-trade result. The 65 % fraction (vs an earlier
+ * 60 %) deepens the capital constraint on clean-tech firms in permit regimes,
+ * roughly doubling their surplus permits and widening the Cap vs Cap & Trade
+ * efficiency gap.
  *
  * Default arithmetic (5 firms, 5 rounds, startCapital $1,000, verified numerically):
- *   cleanTechCost = $600. After investment, clean-tech starts with $400 of
+ *   cleanTechCost = $650. After investment, clean-tech starts with $350 of
  *   working capital vs. $1,000 for standard firms.
- *   Tax (greedy): cumulative profit clean < standard through R3 (R1: −$560,
- *     R2: −$416, R3: −$90), clean overtakes at R4 (+$548), wide lead at R5
- *     (+$1,706). Delivers the "short-term pain, long-term gain" narrative.
+ *   Tax (greedy): cumulative profit clean < standard through R3 (R1: −$440,
+ *     R2: −$104), clean overtakes at R4 (+$220), wide lead at R5
+ *     (+$1,181). Delivers the "short-term pain, long-term gain" narrative.
  *   Cap (greedy): standard firms exhaust their 7-permit allocation by R3;
- *     clean-tech firms end R5 with ~0.8 permits unused (capital-constrained,
+ *     clean-tech firms end R5 with ~1.6 permits unused (capital-constrained,
  *     not permit-constrained).
  *   Cap & Trade: clean-tech firms remain capital-constrained throughout, so
  *     their reservation price for surplus permits is $0. Standard firms
@@ -45,6 +48,12 @@ export const DEFAULTS = {
  *     gross permit value (1 permit × 1,000 units × $1/unit = $1,000; $1,200
  *     with aggressive-AI 20 % premium). Equilibrium trading price lands
  *     between these two anchors.
+ *
+ * **cacCap** (in buildConfig) — The C&C per-firm-per-round cap is set at 75 %
+ * of the theoretical maximum safe output parcelled evenly. This models the
+ * informational constraint facing regulators: lacking firm-level cost data,
+ * they set a precautionary cap below the optimum, producing visible deadweight
+ * loss that motivates the efficiency critique of command-and-control.
  *
  * **maxCleanTech** — ~40 % of firms (at least 1): enough for heterogeneity
  * without making clean tech the majority.
@@ -63,7 +72,7 @@ export function deriveSessionParams(numFirms, numRounds, opts = {}) {
     (numFirms * (Math.pow(2, targetRound) - 1) * ppmPer1000);
   const startCapital = Math.ceil(exactC / 50) * 50;
 
-  const cleanTechCost = Math.round(startCapital * 0.60);
+  const cleanTechCost = Math.round(startCapital * 0.65);
   const maxCleanTech = Math.max(1, Math.floor(numFirms * 0.4));
 
   const maxThingamabobs = (ppmBudget / ppmPer1000) * 1000;
@@ -133,7 +142,7 @@ export function buildConfig(overrides = {}) {
 
   c.profitPerUnit = c.revenuePerUnit - c.costPerUnit;
   c.maxThingamabobs = (c.triggerPpm - c.startPpm) / c.ppmPer1000 * 1000;
-  c.cacCap = Math.floor(c.maxThingamabobs / (c.numFirms * c.numRounds));
+  c.cacCap = Math.floor(c.maxThingamabobs * 0.75 / (c.numFirms * c.numRounds));
   return Object.freeze(c);
 }
 
@@ -458,7 +467,7 @@ export function processRound(state, regime, production) {
   }
 
   d.ppm += totalPpmAdded;
-  if (d.ppm >= config.triggerPpm) d.catastrophe = true;
+  if (d.ppm > config.triggerPpm) d.catastrophe = true;
   d.totalTaxRevenue += roundTaxRevenue;
 
   const totalProd = clamped.reduce((s, v) => s + v, 0);

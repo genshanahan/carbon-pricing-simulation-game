@@ -795,27 +795,16 @@ function renderRegime(regime) {
 
   const fnotes = facilitatorNotes(regime);
   let fnotesHtml = '';
-  const _output = computeTotalEconomicOutput(state, regime);
-  const _budgetUsed = computeBudgetUsed(state, regime);
-  const efficiencyAnalog = outputBudgetAnalogy(_output, _budgetUsed);
-  const analogSection = efficiencyAnalog
-    ? `<div class="efficiency-analogy-box" style="margin-top:1rem;"><p>${efficiencyAnalog}</p></div>`
-    : '';
-  if (fnotes || efficiencyAnalog) {
-    const fnotesBody = fnotes ? `
+  if (fnotes) {
+    fnotesHtml = `
+      <details class="facilitator-notes">
+        <summary>Facilitator Notes \u2014 ${REGIME_LABELS[regime]}</summary>
+        <div class="fn-body">
           <p><strong>Timing:</strong> ${fnotes.timing}</p>
           <p><strong>Key points:</strong></p>
           <ul>${fnotes.keyPoints.map(p => `<li>${p}</li>`).join('')}</ul>
           <p><strong>Expected dynamics:</strong></p>
           <ul>${fnotes.expectedDynamics.map(p => `<li>${p}</li>`).join('')}</ul>
-          <p><strong>Debrief tips:</strong></p>
-          <ul>${fnotes.debriefTips.map(p => `<li>${p}</li>`).join('')}</ul>` : '';
-    fnotesHtml = `
-      <details class="facilitator-notes">
-        <summary>Facilitator Notes — ${REGIME_LABELS[regime]}</summary>
-        <div class="fn-body">
-          ${fnotesBody}
-          ${analogSection}
         </div>
       </details>`;
   }
@@ -826,8 +815,8 @@ function renderRegime(regime) {
       <div class="info-box accent">${regimeDescription(regime, config)}</div>
     </div>
     ${fnotesHtml}
-    ${!roundDone ? renderCO2Meter(d.ppm, config, renderCO2Extra(d.ppm, config, isTax ? `<div style="margin-top:0.4rem;font-size:0.85rem;">Tax revenue: <strong>${fmtMoney(d.totalTaxRevenue)}</strong></div>` : '')) : ''}
-    ${!roundDone ? renderIndustryTotals(regime, d, config) : ''}
+    ${renderCO2Meter(d.ppm, config, renderCO2Extra(d.ppm, config, isTax ? `<div style="margin-top:0.4rem;font-size:0.85rem;">Tax revenue: <strong>${fmtMoney(d.totalTaxRevenue)}</strong></div>` : ''))}
+    ${renderIndustryTotals(regime, d, config)}
   `;
 
   if (usesClean && d.currentRound === 0 && d.rounds.length === 0) {
@@ -1335,7 +1324,7 @@ function renderResults() {
       <p>The Total Economic Output figure above does not distinguish between these. Should it?</p>
     </div>
 
-    ${renderDiscussionCard(state.config)}
+    ${renderDiscussionCard(state.config, true)}
     ${renderDiscussionFacilitatorHints('Facilitator')}
     ${renderComparisonTable(completed, REGIME_LABELS)}
 
