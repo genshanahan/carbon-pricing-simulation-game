@@ -15,7 +15,7 @@ import {
   regimeUsesPermits, regimeHasCap, regimeHasPermitMarket, regimeDescription, debriefPrompt,
   outputBudgetAnalogy, formatTotalEconomicOutput, formatBudgetUsed, budgetUsedStyle,
   renderRoundHistory, renderCO2Extra, renderDiscussionCard, renderComparisonTable,
-} from './ui-helpers.js?v=20260502';
+} from './ui-helpers.js?v=20260508';
 
 /* ── Globals ── */
 
@@ -179,6 +179,10 @@ async function init() {
     if (!state) {
       syncCleanTechStudentListener();
       content.innerHTML = `<div class="card"><h2>Room not found</h2><p>No game state for this room. <a href="index.html">Return to join page</a></p></div>`;
+    } else if (FIRM_ID < 0 || FIRM_ID >= state.config.numFirms) {
+      const nf = state.config.numFirms;
+      state = null;
+      content.innerHTML = `<div class="card"><h2>Invalid firm</h2><p>Firm ${FIRM_ID} does not exist in this game (${nf} firms configured). <a href="index.html">Return to join page</a></p></div>`;
       return;
     }
     state.config = buildConfig(state.config);

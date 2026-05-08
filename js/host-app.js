@@ -14,8 +14,9 @@ import {
 
 import {
   pushState, onStateChange, onSubmissions, clearSubmissions,
-  onStudentConnections, deleteRoom, onProposals,
-  mirrorCleanTechClaim, onCleanTechClaims, fetchCleantechClaims,
+  onStudentConnections, onProposals,
+  mirrorCleanTechClaim, onCleanTechClaims,
+  clearNonStateData,
 } from './firebase-sync.js';
 
 import {
@@ -25,7 +26,7 @@ import {
   outputBudgetAnalogy, formatTotalEconomicOutput, formatBudgetUsed, budgetUsedStyle,
   facilitatorNotes, onboardingGuide, renderRoundHistory, renderCO2Extra,
   renderDiscussionCard, renderDiscussionFacilitatorHints, renderComparisonTable,
-} from './ui-helpers.js?v=20260502';
+} from './ui-helpers.js?v=20260508';
 
 /* ── Globals ── */
 
@@ -244,7 +245,7 @@ export async function init() {
       render();
     } catch (err) {
       console.error(err);
-      content.innerHTML = `<div class="card"><h2>Something went wrong</h2><p>${String(err.message || err)}</p><p>Check the browser console for details.</p></div>`;
+      content.innerHTML = `<div class="card"><h2>Something went wrong</h2><p>${escHtml(String(err.message || err))}</p><p>Check the browser console for details.</p></div>`;
     }
   });
 }
@@ -335,8 +336,13 @@ window.hostApp = {
 
   jumpToRegime(regime) {
     if (!state) return;
-    if (regime !== 'setup' && regime !== 'results' && !REGIMES.includes(regime)) return;
-    window.hostApp.switchRegime(regime);
+    if (regime === 'setup' || regime === 'results') {
+      window.hostApp.switchRegime(regime);
+    } else if (state.config.enabledRegimes.includes(regime) || regime === 'freemarket') {
+      window.hostApp.switchRegime(regime);
+    } else {
+      return;
+    }
     const sel = document.querySelector('.host-jump-select');
     if (sel) sel.value = '';
   },
@@ -385,7 +391,12 @@ window.hostApp = {
 
   async submitRound(regime) {
     const d = state.regimeData[regime];
-    bakeCleanTechIntoState(regime);
+    const bakeErr = bakeCleanTechIntoState(regime);
+    if (bakeErr) {
+      roundFormErrorsByRegime[regime] = bakeErr;
+      render();
+      return;
+    }
     const production = [];
     for (let i = 0; i < state.config.numFirms; i++) {
       const el = document.getElementById(`prod-${regime}-${i}`);
@@ -486,7 +497,7 @@ window.hostApp = {
 
   applySessionConfig() {
     if (!state || state.gameStarted) return;
-    const numFirms = Math.max(3, Math.min(8, parseInt(document.getElementById('cfg-num-firms')?.value, 10) || 5));
+    const numFirms = Math.max(4, Math.min(6, parseInt(document.getElementById('cfg-num-firms')?.value, 10) || 5));
     const enabled = [];
     for (const r of OPTIONAL_REGIMES) {
       const el = document.getElementById(`cfg-regime-${r}`);
@@ -503,12 +514,12 @@ window.hostApp = {
     sync();
   },
 
-  resetGame() {
+  async resetGame() {
     if (confirm('Reset the entire game? All data will be lost.')) {
       const config = buildConfig(state.config);
       state = createInitialState(config);
       state.regime = 'setup';
-      sync();
+      await Promise.all([sync(), clearNonStateData(ROOM)]);
     }
   },
 };
@@ -554,16 +565,20 @@ function buildFdEff(regime, fd, i, config) {
  * the engine actually needs cleanTech in state.
  */
 function bakeCleanTechIntoState(regime) {
-  if (!state) return;
+  if (!state) return null;
   const rd = state.regimeData[regime];
-  if (!rd) return;
+  if (!rd) return null;
   const n = state.config.numFirms;
   for (let i = 0; i < n; i++) {
     const shouldHave = firmHasCleanTech(regime, i);
     if (shouldHave && !rd.firms[i].cleanTech) {
-      setCleanTech(state, regime, i);
+      const result = setCleanTech(state, regime, i);
+      if (result.error) {
+        return `Clean-tech for ${state.firms[i]?.name || 'Firm ' + (i+1)}: ${result.error}`;
+      }
     }
   }
+  return null;
 }
 
 /* ── Submission listener ── */
@@ -701,7 +716,7 @@ function renderSetup() {
       </p>
       <div class="form-group">
         <label for="cfg-num-firms">Number of firms</label>
-        <input type="number" id="cfg-num-firms" min="3" max="8" value="${state.config.numFirms}" step="1" inputmode="numeric" pattern="[0-9]*">
+        <input type="number" id="cfg-num-firms" min="4" max="6" value="${state.config.numFirms}" step="1" inputmode="numeric" pattern="[0-9]*">
       </div>
       <p style="font-size:0.82rem;color:var(--text-secondary);margin:0.25rem 0 0.75rem;">
         Each regime runs for 5 rounds. Parameters are auto-calibrated from the number of firms.

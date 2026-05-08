@@ -61,6 +61,17 @@ export async function deleteRoom(roomCode) {
   await roomRef(roomCode).remove();
 }
 
+export async function clearNonStateData(roomCode) {
+  ensureInit();
+  const ref = roomRef(roomCode);
+  await Promise.all([
+    ref.child('submissions').remove(),
+    ref.child('debrief').remove(),
+    ref.child('cleantech').remove(),
+    ref.child('meta/students').remove(),
+  ]);
+}
+
 /* ── State sync (facilitator writes, everyone reads) ── */
 
 export async function pushState(roomCode, state) {

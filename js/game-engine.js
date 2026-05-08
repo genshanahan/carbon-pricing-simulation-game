@@ -17,53 +17,51 @@ export const DEFAULTS = {
 };
 
 /**
- * Per-firm-count calibration parameters, verified by greedy-play simulation
- * to produce the strict ILO ordering C&C < Tax < Cap < C&T at 5 rounds.
+ * Per-firm-count calibration parameters (firms 4-6), verified by greedy-play
+ * simulation to produce the strict ILO ordering C&C < Tax < Cap < C&T at
+ * 5 rounds while guaranteeing catastrophe safety in Cap and C&T.
  *
  * - **cacCapMultiplier**: C&C cap as fraction of safe-max per firm per round.
+ *   At 0.25 the cap binds immediately, modelling the informational constraint
+ *   facing regulators who set a precautionary limit well below the optimum.
  * - **cleanTechFraction**: clean-tech sunk cost as fraction of startCapital.
- * - **permitsPerFirm**: calibrated so that (a) the Cap regime avoids
- *   catastrophe under greedy play, and (b) clean-tech firms retain enough
- *   surplus permits for C&T trading to generate a visible TEO advantage.
- *
- * Permits may exceed the even-share safe budget because greedy play is the
- * maximum-production (and maximum-ppm) strategy: any sub-optimal play
- * produces fewer units and lower ppm, so if Cap avoids catastrophe under
- * greedy play it avoids it under all strategies. C&T may trigger catastrophe
- * because trading enables more complete permit utilisation — a genuine
- * economic insight about how cap levels interact with trading.
+ *   Set low enough (0.65-0.68) that cleanTechNpvPositive returns true in Cap,
+ *   so strategic AI firms voluntarily invest. They then become capital-
+ *   constrained and leave surplus permits unused, keeping PPM safe.
+ * - **permitsPerFirm**: set so that numFirms × permitsPerFirm × 2 ≤ 70 (the
+ *   ppm budget). This guarantees Cap/C&T cannot trigger catastrophe regardless
+ *   of player choices. TEO ordering holds because clean-tech AI firms (NPV-
+ *   positive) take slots, generate surplus permits, and enable C&T gains.
+ * - **maxCleanTech**: enough slots that both strategic AI firms can invest
+ *   while reserving one slot for the player.
  */
 const FIRM_CALIBRATION = {
-  3: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 16 },
-  4: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 11 },
-  5: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 10 },
-  6: { cacCapMultiplier: 0.25, cleanTechFraction: 0.91, permitsPerFirm: 8 },
-  7: { cacCapMultiplier: 0.25, cleanTechFraction: 0.85, permitsPerFirm: 6 },
-  8: { cacCapMultiplier: 0.25, cleanTechFraction: 0.88, permitsPerFirm: 6 },
+  4: { cacCapMultiplier: 0.25, cleanTechFraction: 0.65, permitsPerFirm: 8, maxCleanTech: 2 },
+  5: { cacCapMultiplier: 0.25, cleanTechFraction: 0.65, permitsPerFirm: 7, maxCleanTech: 3 },
+  6: { cacCapMultiplier: 0.25, cleanTechFraction: 0.68, permitsPerFirm: 5, maxCleanTech: 3 },
 };
 
 /**
  * Derive session parameters calibrated to the pedagogical model.
  *
+ * Supported firm counts: 4-6. Values outside this range are clamped by
+ * {@link buildConfig}; if an unsupported count reaches here the nearest
+ * supported calibration is used as fallback.
+ *
  * **startCapital** — Set so that unconstrained free-market production triggers
  * catastrophe at roughly 60 % of the way through the regime (round 3 of 5).
  *
- * **cleanTechCost** — Sunk cost set per-firm-count via {@link FIRM_CALIBRATION}.
- * High enough that clean-tech firms are deeply capital-constrained in permit
- * regimes, generating surplus permits for C&T trading. In the Tax regime the
- * sunk cost creates a visible "short-term pain, long-term gain" arc.
+ * **cleanTechCost** — Fraction of startCapital (0.65-0.68). Low enough that
+ * clean-tech is NPV-positive in Cap for strategic AI, high enough that
+ * clean-tech firms are capital-constrained and generate surplus permits.
  *
- * **cacCap** (applied in buildConfig) — Set at 25 % of the theoretical maximum
- * safe output per firm per round. Models the informational constraint facing
- * regulators: lacking firm-level cost data, they set a precautionary cap well
- * below the optimum, producing visible deadweight loss.
+ * **cacCap** (applied in buildConfig) — 25 % of safe-max per firm per round.
  *
- * **maxCleanTech** — ~40 % of firms (at least 1): enough for heterogeneity
- * without making clean tech the majority.
+ * **maxCleanTech** — From calibration table; ensures both strategic AI firms
+ * can invest while reserving one slot for the player.
  *
- * **permitsPerFirm** — Per-firm-count values from {@link FIRM_CALIBRATION}
- * ensure permits are a binding constraint for standard firms while leaving
- * clean-tech firms with tradeable surplus.
+ * **permitsPerFirm** — From calibration table; guarantees numFirms ×
+ * permitsPerFirm × ppmPer1000 ≤ ppmBudget (catastrophe impossible).
  */
 export function deriveSessionParams(numFirms, numRounds, opts = {}) {
   const ppmPer1000 = opts.ppmPer1000 ?? DEFAULTS.ppmPer1000;
@@ -76,17 +74,13 @@ export function deriveSessionParams(numFirms, numRounds, opts = {}) {
     (numFirms * (Math.pow(2, targetRound) - 1) * ppmPer1000);
   const startCapital = Math.ceil(exactC / 50) * 50;
 
-  const cal = FIRM_CALIBRATION[numFirms];
-  const cleanTechFraction = cal ? cal.cleanTechFraction : 0.91;
+  const cal = FIRM_CALIBRATION[numFirms] ?? FIRM_CALIBRATION[5];
+  const cleanTechFraction = cal.cleanTechFraction;
   const cleanTechCost = Math.round(startCapital * cleanTechFraction);
-  const maxCleanTech = Math.max(1, Math.floor(numFirms * 0.4));
+  const maxCleanTech = cal.maxCleanTech;
 
-  const maxThingamabobs = (ppmBudget / ppmPer1000) * 1000;
-  const permitsPerFirm = cal
-    ? cal.permitsPerFirm
-    : Math.max(1, Math.floor(Math.floor(maxThingamabobs / 1000) / numFirms));
-
-  const cacCapMultiplier = cal ? cal.cacCapMultiplier : 0.25;
+  const permitsPerFirm = cal.permitsPerFirm;
+  const cacCapMultiplier = cal.cacCapMultiplier;
 
   return { startCapital, cleanTechCost, maxCleanTech, permitsPerFirm, cacCapMultiplier };
 }
@@ -142,7 +136,7 @@ export function previousRegimeInSession(config, regime) {
 export function buildConfig(overrides = {}) {
   const c = { ...DEFAULTS, ...overrides };
   c.enabledRegimes = normaliseEnabledRegimes(c.enabledRegimes);
-  c.numFirms = Math.max(3, Math.min(8, Math.round(Number(c.numFirms) || DEFAULTS.numFirms)));
+  c.numFirms = Math.max(4, Math.min(6, Math.round(Number(c.numFirms) || DEFAULTS.numFirms)));
   c.numRounds = Math.max(3, Math.min(7, Math.round(Number(c.numRounds) || DEFAULTS.numRounds)));
   const derived = deriveSessionParams(c.numFirms, c.numRounds, c);
   c.startCapital   = derived.startCapital;
@@ -624,7 +618,7 @@ export function undoLastRound(state, regime) {
 
   d.ppm -= roundPpmRemoved;
   d.totalTaxRevenue -= roundTaxRemoved;
-  d.catastrophe = d.ppm >= state.config.triggerPpm;
+  d.catastrophe = d.ppm > state.config.triggerPpm;
 
   return true;
 }

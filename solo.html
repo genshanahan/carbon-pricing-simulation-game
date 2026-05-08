@@ -4,14 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script defer src="https://app.secureprivacy.ai/script/69e3602f7a453f4e8d0d10a1.js"></script>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-NJJES76EWQ"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-NJJES76EWQ');
+  window.addEventListener('sp_consent_changed', function(e) {
+    if (e.detail && e.detail.analytics) {
+      var s = document.createElement('script');
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-NJJES76EWQ';
+      s.async = true;
+      document.head.appendChild(s);
+      gtag('js', new Date());
+      gtag('config', 'G-NJJES76EWQ');
+    }
+  });
 </script>
 <title>Carbon Pricing Simulation — Solo Play</title>
 <link rel="stylesheet" href="css/styles.css">

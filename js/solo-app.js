@@ -17,7 +17,7 @@ import {
   regimeHasPermitMarket, regimeDescription, debriefPrompt,
   outputBudgetAnalogy, formatTotalEconomicOutput, formatBudgetUsed, budgetUsedStyle, facilitatorNotes,
   renderRoundHistory, renderCO2Extra, renderDiscussionCard, renderDiscussionFacilitatorHints, renderComparisonTable,
-} from './ui-helpers.js?v=20260502';
+} from './ui-helpers.js?v=20260508';
 
 import {
   PERSONALITIES, getPersonality,
@@ -722,7 +722,7 @@ function renderTradePanel(regime, d, config) {
         </div>
         <div class="form-group">
           <label>Price per permit ($)</label>
-          <input type="number" id="tradePrice" min="0" step="1" value="0" inputmode="numeric">
+          <input type="number" id="tradePrice" min="1" step="1" value="" inputmode="numeric" placeholder="Enter price">
         </div>
       </div>
       <div id="tradeError" class="form-error hidden" style="margin-bottom:0.5rem;"></div>
@@ -957,7 +957,7 @@ function renderResultsScreen() {
     <summary><strong>Computer-Controlled Firm Strategy Reveal</strong> <span style="color:var(--text-secondary);font-weight:400;">(click to expand)</span></summary>
     <div style="margin-top:0.5rem;">
       <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:0.75rem;">
-        The four computer-controlled firms were pre-assigned hidden personality types that determined their decision-making:
+        The four computer-controlled firms were pre-assigned hidden personality types that shaped their <em>investment</em> and <em>trading</em> decisions (all firms produce at maximum capacity each round):
       </p>
       ${state.firms.filter((_, i) => i !== PLAYER_FIRM).map((f, idx) => {
         const i = idx + 1;
@@ -1230,6 +1230,10 @@ window.soloApp = {
 
     if (isNaN(partner) || isNaN(qty) || qty <= 0 || isNaN(price) || price < 0) {
       if (errEl) { errEl.textContent = 'Please fill in all trade fields with valid values.'; errEl.classList.remove('hidden'); }
+      return;
+    }
+    if (price <= 0) {
+      if (errEl) { errEl.textContent = 'Price must be greater than $0. Permits have real economic value — propose a market price.'; errEl.classList.remove('hidden'); }
       return;
     }
 
