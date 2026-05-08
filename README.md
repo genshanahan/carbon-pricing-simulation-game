@@ -46,7 +46,7 @@ The primary mode. A facilitator projects the host view on a classroom screen; st
 
 **Duration:** ~90 minutes (game + debriefs), though this varies with class size and discussion depth.
 
-**Class size:** Designed for 3–8 firms of 1–3 students each. The facilitator can adjust the number of firms at game creation; each regime runs for 5 rounds (fixed to preserve calibrated learning outcomes).
+**Class size (facilitated mode):** **4–6 firms** (of 1–3 students each). The facilitator chooses the firm count when configuring the session before play begins; this range is fixed so calibration holds — emissions stay within safe bounds under quantity regimes and the intended economic ordering across regimes is preserved. Each regime runs for 5 rounds (fixed).
 
 **Self-hosting:** If you want to run your own independent instance, you can fork the repository and set up your own Firebase project. See **[SETUP.md](SETUP.md)** for instructions.
 
