@@ -1,6 +1,15 @@
 # The Carbon Pricing Simulation Game
 
-<img width="982" height="444" alt="Screenshot 2026-05-11 at 16 34 25" src="https://github.com/user-attachments/assets/11d9d4ea-58a1-41cf-953f-78d7176d300d" />
+<!-- markdownlint-disable MD033 -->
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" bgcolor="#f6f8fa">
+        <img width="982" height="444" alt="Carbon Pricing Simulation Game landing page screenshot" src="https://github.com/user-attachments/assets/11d9d4ea-58a1-41cf-953f-78d7176d300d" />
+      </td>
+    </tr>
+  </table>
+</div>
 
 An interactive classroom simulation of five carbon regulation regimes — from free markets to cap and trade — designed for sustainability and business education.
 
@@ -26,9 +35,26 @@ The session progresses through five regulatory regimes. Capital, costs, and reve
 4. **Cap** — The tax is removed. The regulator issues a fixed number of emissions permits. Clean-tech firms can produce more per permit. Students experience the rigidity of a fixed allocation — some firms are permit-constrained while others have capacity to spare.
 5. **Cap and Trade** — Same permit mechanics, but firms may now buy and sell permits through bilateral negotiation. Permits flow to the highest-value users, and a market price emerges. Students see how trade reallocates emissions rights and discover the price the market produces.
 
-<img width="750" height="268" alt="Screenshot 2026-05-11 at 16 50 56" src="https://github.com/user-attachments/assets/254ae426-6903-409a-bbd8-748a14a11b0b" />
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" bgcolor="#f6f8fa">
+        <img width="750" height="268" alt="Carbon Pricing Simulation Game regime comparison screenshot" src="https://github.com/user-attachments/assets/254ae426-6903-409a-bbd8-748a14a11b0b" />
+      </td>
+    </tr>
+  </table>
+</div>
 
-<img width="710" height="384" alt="Screenshot 2026-05-11 at 17 17 22" src="https://github.com/user-attachments/assets/8517b754-c5a4-4eae-9894-820cd799ee65" />
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" bgcolor="#f6f8fa">
+        <img width="710" height="384" alt="Carbon Pricing Simulation Game permit market screenshot" src="https://github.com/user-attachments/assets/8517b754-c5a4-4eae-9894-820cd799ee65" />
+      </td>
+    </tr>
+  </table>
+</div>
+<!-- markdownlint-enable MD033 -->
 
 ## Learning outcomes
 
