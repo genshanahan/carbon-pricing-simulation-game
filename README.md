@@ -84,7 +84,7 @@ The primary mode. A facilitator projects the host view on a classroom screen; st
 
 ### Solo mode (self-study)
 
-Open **[solo.html](https://genshanahan.github.io/carbon-pricing-simulation-game/solo.html)** in any browser. No Firebase, no room code, no other players needed. You play as one firm alongside AI opponents that pursue profit-maximising strategies. Suitable for:
+Open **[solo.html](https://genshanahan.github.io/carbon-pricing-simulation-game/solo.html)** in any browser. No Firebase, no room code, no other players needed. You play as one firm alongside four computer-simulated opponents that pursue profit-maximising strategies. Suitable for:
 
 - Educators previewing the game before running it in class
 - Students preparing before a facilitated session
@@ -102,7 +102,7 @@ The first regime is a straightforward implementation of **The Thingamabob Game**
 
 ## AI-assisted development
 
-The conception, design, and coding of this game were substantially supported by large language models via the [Cursor](https://cursor.com) IDE, including Claude Opus 4.6 and Sonnet 4.6 (Anthropic), GPT-5.4 (OpenAI), and Cursor Composer 2. This assistance spanned the game engine logic, Firebase integration, UI rendering, CSS styling, solo-mode AI strategies, and documentation. All pedagogical design decisions, game mechanics, theoretical framing, and final implementation choices were directed by the human author, who reviewed, tested, and takes responsibility for all code and content in this repository.
+The conception, design, and coding of this game were substantially supported by large language models via the [Cursor](https://cursor.com) IDE, including Claude Opus 4.6 and Sonnet 4.6 (Anthropic), GPT-5.4 (OpenAI), and Cursor Composer 2. This assistance spanned the game engine logic, Firebase integration, UI rendering, CSS styling, solo-mode computer-simulated firm strategies, and documentation. All pedagogical design decisions, game mechanics, theoretical framing, and final implementation choices were directed by the human author, who reviewed, tested, and takes responsibility for all code and content in this repository.
 
 ## How to cite
 
