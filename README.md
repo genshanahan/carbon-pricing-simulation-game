@@ -78,7 +78,7 @@ The conception, design, and coding of this game were substantially supported by 
 
 ## Licence
 
-This project is released under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** ([CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)). See the `[LICENSE](LICENSE)` file for details.
+This project is released under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** ([CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)). See the ([LICENSE](LICENSE)) file for details.
 
 You are free to adapt and share this game for non-commercial educational purposes, provided you give appropriate credit and distribute any adaptations under the same licence.
 
