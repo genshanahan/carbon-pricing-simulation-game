@@ -49,12 +49,15 @@ The session progresses through five regulatory regimes. Capital, costs, and reve
   <table>
     <tr>
       <td align="center" bgcolor="#f6f8fa">
-        <img width="710" height="384" alt="Carbon Pricing Simulation Game permit market screenshot" src="https://github.com/user-attachments/assets/8c0b35d0-0a37-4dbf-94f8-bd4f17c0dadf" />
+        <img width="710" height="572" alt="Carbon Pricing Simulation Game permit market screenshot" src="https://github.com/user-attachments/assets/d5621e4e-3c58-4f0f-942c-fa5a09ad0ef7" />
       </td>
     </tr>
   </table>
 </div>
 <!-- markdownlint-enable MD033 -->
+
+
+
 
 ## Learning outcomes
 
