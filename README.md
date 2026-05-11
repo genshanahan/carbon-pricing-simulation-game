@@ -28,9 +28,10 @@ The session progresses through five regulatory regimes. Capital, costs, and reve
 <img width="750" height="268" alt="Screenshot 2026-05-11 at 16 50 56" src="https://github.com/user-attachments/assets/254ae426-6903-409a-bbd8-748a14a11b0b" />
 
 4. **Cap** — The tax is removed. The regulator issues a fixed number of emissions permits. Clean-tech firms can produce more per permit. Students experience the rigidity of a fixed allocation — some firms are permit-constrained while others have capacity to spare.
+<img width="996" height="512" alt="Screenshot 2026-05-11 at 16 49 46" src="https://github.com/user-attachments/assets/d159f249-c2c9-4325-ab74-c607e1c6ba0d" />
 
 5. **Cap and Trade** — Same permit mechanics, but firms may now buy and sell permits through bilateral negotiation. Permits flow to the highest-value users, and a market price emerges. Students see how trade reallocates emissions rights and discover the price the market produces.
-<img width="996" height="512" alt="Screenshot 2026-05-11 at 16 49 46" src="https://github.com/user-attachments/assets/d159f249-c2c9-4325-ab74-c607e1c6ba0d" /><img width="709" height="785" alt="Screenshot 2026-05-11 at 16 57 44" src="https://github.com/user-attachments/assets/f26d087a-2934-47d8-92a9-a628dea5cdb8" />
+<img width="709" height="785" alt="Screenshot 2026-05-11 at 16 57 44" src="https://github.com/user-attachments/assets/f26d087a-2934-47d8-92a9-a628dea5cdb8" />
 
 ## Learning outcomes
 
