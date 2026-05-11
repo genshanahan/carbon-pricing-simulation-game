@@ -195,6 +195,25 @@ function fmtPermitUnits(value) {
   return fmt(Math.max(0, Math.floor((Number(value) || 0) + 0.0001)));
 }
 
+function renderMarketGuidance(fd, reservation) {
+  const pr = permitsRemaining(fd);
+  const canSell = pr > 0;
+  const canBuy = reservation > 0 && fd.capital >= 1;
+  if (canBuy && canSell) {
+    return `<span style="color:#c0392b;font-weight:600;">Buys at &le; ${fmtMoney(reservation)}</span><br><span style="color:var(--text-secondary);">Sells at &ge; ${fmtMoney(reservation)}</span>`;
+  }
+  if (canBuy) {
+    return `<span style="color:#c0392b;font-weight:600;">Would buy up to ${fmtMoney(reservation)}</span>`;
+  }
+  if (canSell && reservation === 0) {
+    return '<span style="color:var(--success);font-weight:600;">Would sell surplus permits</span>';
+  }
+  if (canSell) {
+    return `Will sell at &ge; ${fmtMoney(reservation)}`;
+  }
+  return '<span style="color:var(--text-secondary);">No interest</span>';
+}
+
 /* ── Initialise game ── */
 
 function startGame() {
@@ -665,16 +684,7 @@ function renderTradePanel(regime, d, config) {
     const reservation = i !== PLAYER_FIRM ? aiReservationPrice(i, fd, config, regime) : null;
     let marketRole = '\u2014';
     if (i !== PLAYER_FIRM) {
-      const afford = maxAffordable(fd, config);
-      if (pr > 0 && reservation === 0) {
-        marketRole = '<span style="color:var(--success);font-weight:600;">Would sell surplus permits</span>';
-      } else if (pr <= 0 && afford > 0) {
-        marketRole = `<span style="color:#c0392b;font-weight:600;">Would buy up to ${fmtMoney(reservation)}</span>`;
-      } else if (reservation > 0) {
-        marketRole = `Will sell at \u2265 ${fmtMoney(reservation)}`;
-      } else {
-        marketRole = '<span style="color:var(--text-secondary);">No interest</span>';
-      }
+      marketRole = renderMarketGuidance(fd, reservation);
     }
     return `<tr>
       <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
@@ -715,8 +725,8 @@ function renderTradePanel(regime, d, config) {
   return `<div class="card">
     <h3>Permit Market</h3>
     <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:0.75rem;">
-      Each computer-controlled firm has a <strong>reservation price</strong> &mdash; the minimum they will accept to sell a permit
-      (or maximum they will pay to buy one). Propose trades below.
+      Each computer-controlled firm has a <strong>reservation price</strong> &mdash; the maximum they will pay when you sell to them,
+      and the minimum they will accept when you buy from them. Propose trades below.
     </p>
     <table>
       <thead><tr><th>Firm</th><th class="num">Held</th><th class="num">Avail</th><th class="num">Capital</th><th>Market Role</th></tr></thead>
@@ -783,12 +793,7 @@ function renderCompetitorCard(regime, d, config) {
     let roleBit = '';
     if (isTrademarket) {
       const res = aiReservationPrice(i, fd, config, regime);
-      const pr = permitsRemaining(fd);
-      let role;
-      if (pr > 0 && res === 0) role = '<span class="market-role seller">Would sell surplus permits</span>';
-      else if (pr <= 0) role = `<span class="market-role buyer">Would buy up to ${fmtMoney(res || config.revenuePerUnit * unitsPerPermit(fd))}</span>`;
-      else role = '<span class="market-role neutral">No interest</span>';
-      roleBit = `<div class="competitor-role">${role}</div>`;
+      roleBit = `<div class="competitor-role">${renderMarketGuidance(fd, res)}</div>`;
     }
 
     const lastLine = lastRound

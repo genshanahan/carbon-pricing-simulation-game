@@ -521,12 +521,13 @@ function renderCalculator(regime, fd, config, d) {
 
     let tradeCalc = '';
     if (regime === 'trademarket') {
+      const actualClean = !!fd.cleanTech;
       tradeCalc = `
-        ${renderPermitValueExplain(config, calcSimCleanTech)}
+        ${renderPermitValueExplain(config, actualClean)}
         <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #d4e6f1;">
           <h3 style="font-size:0.88rem;">Trade Calculator</h3>
           <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.45rem;">
-            Uses your <strong>assigned</strong> clean-tech status (${fd.cleanTech ? 'clean tech' : 'standard'}), not the simulator toggle above.
+            Uses your <strong>assigned</strong> clean-tech status (${actualClean ? 'clean tech' : 'standard'}), not the simulator toggle above.
           </p>
           <label>Price per permit ($):</label>
           <input type="number" id="tradeCalcPrice" min="0" value="0" oninput="window.playApp.updateTradeCalc()" style="width:100%;margin-bottom:0.4rem;" step="1" inputmode="numeric" pattern="[0-9]*">
