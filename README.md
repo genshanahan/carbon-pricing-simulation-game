@@ -1,5 +1,7 @@
 # The Carbon Pricing Simulation Game
 
+<img width="982" height="444" alt="Screenshot 2026-05-11 at 16 34 25" src="https://github.com/user-attachments/assets/11d9d4ea-58a1-41cf-953f-78d7176d300d" />
+
 An interactive classroom simulation of five carbon regulation regimes — from free markets to cap and trade — designed for sustainability and business education.
 
 **[Try the solo demo](https://genshanahan.github.io/carbon-pricing-simulation-game/solo.html)** — no setup required. Play through all five regimes against computer-simulated firms in your browser.
@@ -19,10 +21,17 @@ This game addresses that gap. It walks students through five regulatory regimes 
 The session progresses through five regulatory regimes. Capital, costs, and revenue are reset at the start of each regime; the only variable is the rule.
 
 1. **Free Market** — No regulation. Firms compete to maximise profit. The historical pattern: rational profit-maximisation destroys the commons. Students articulate in their own words why unregulated prices fail to reflect the true costs of production.
+
 2. **Command and Control** — A uniform production cap per firm. The atmosphere survives, but the flat cap wastes productive capacity. Students see the deadweight loss that motivates the efficiency critique behind market-based alternatives.
+
 3. **Carbon Tax** — A per-unit tax on emissions replaces the cap. Clean technology (limited slots, sunk investment) halves a firm's emissions and effective tax rate, introducing firm heterogeneity. Price signals redirect behaviour, but create winners and losers. Students confront the distributional consequences of incentive-based regulation.
+<img width="750" height="268" alt="Screenshot 2026-05-11 at 16 50 56" src="https://github.com/user-attachments/assets/254ae426-6903-409a-bbd8-748a14a11b0b" />
+
 4. **Cap** — The tax is removed. The regulator issues a fixed number of emissions permits. Clean-tech firms can produce more per permit. Students experience the rigidity of a fixed allocation — some firms are permit-constrained while others have capacity to spare.
+<img width="996" height="512" alt="Screenshot 2026-05-11 at 16 49 46" src="https://github.com/user-attachments/assets/d159f249-c2c9-4325-ab74-c607e1c6ba0d" />
+
 5. **Cap and Trade** — Same permit mechanics, but firms may now buy and sell permits through bilateral negotiation. Permits flow to the highest-value users, and a market price emerges. Students see how trade reallocates emissions rights and discover the price the market produces.
+<img width="709" height="785" alt="Screenshot 2026-05-11 at 16 57 44" src="https://github.com/user-attachments/assets/f26d087a-2934-47d8-92a9-a628dea5cdb8" />
 
 ## Learning outcomes
 
@@ -78,7 +87,7 @@ The conception, design, and coding of this game were substantially supported by 
 
 ## Licence
 
-This project is released under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** ([CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)). See the `[LICENSE](LICENSE)` file for details.
+This project is released under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** ([CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)). See the ([LICENSE](LICENSE)) file for details.
 
 You are free to adapt and share this game for non-commercial educational purposes, provided you give appropriate credit and distribute any adaptations under the same licence.
 
