@@ -199,17 +199,17 @@ function renderMarketGuidance(fd, reservation) {
   const pr = permitsRemaining(fd);
   const canSell = pr > 0;
   const canBuy = reservation > 0 && fd.capital >= 1;
+  const buyLine = `<span style="color:#c0392b;font-weight:600;">Buys at &le; ${fmtMoney(reservation)}</span>`;
+  const sellPrice = reservation === 0 ? `${fmtMoney(0)} (any positive offer)` : fmtMoney(reservation);
+  const sellLine = `<span style="color:var(--success);font-weight:600;">Sells at &ge; ${sellPrice}</span>`;
   if (canBuy && canSell) {
-    return `<span style="color:#c0392b;font-weight:600;">Buys at &le; ${fmtMoney(reservation)}</span><br><span style="color:var(--text-secondary);">Sells at &ge; ${fmtMoney(reservation)}</span>`;
+    return `${buyLine}<br>${sellLine}`;
   }
   if (canBuy) {
-    return `<span style="color:#c0392b;font-weight:600;">Would buy up to ${fmtMoney(reservation)}</span>`;
-  }
-  if (canSell && reservation === 0) {
-    return '<span style="color:var(--success);font-weight:600;">Would sell surplus permits</span>';
+    return buyLine;
   }
   if (canSell) {
-    return `Will sell at &ge; ${fmtMoney(reservation)}`;
+    return sellLine;
   }
   return '<span style="color:var(--text-secondary);">No interest</span>';
 }
