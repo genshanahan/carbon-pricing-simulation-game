@@ -103,6 +103,13 @@ This game combines, adapts and extends three prior educational simulations:
 
 The first regime is a straightforward implementation of **The Thingamabob Game**, which gives students a simulated experience of the profit motive and how, without some form of regulation, profit maximization irrationally but irresistably drives catastrophic emissions. A simplified form of **The Carbon Emissions Game** (itself adapted from **The Pollution Game**) then walks students through the main forms of regulation designed to address this problem, again using the in-game competiton to simulate the structural dynamics of each approach. The simplification primarily entails stripping out detail regarding continuous marginal abatement cost curves in favour of a binary clean-technology toggle, keeping the arithmetic accessible to students without economics training while preserving the structural dynamics of each regulatory regime.
 
+## Climate data sources
+
+The in-game CO₂ concentration tracker and SSP scenario bands draw on:
+
+- **IPCC AR6 WG1** — IPCC. (2021). *Climate Change 2021: The Physical Science Basis. Contribution of Working Group I to the Sixth Assessment Report of the Intergovernmental Panel on Climate Change*. V. Masson-Delmotte et al. (Eds.). Cambridge University Press.
+- **SSP concentration pathways** — Meinshausen, M. et al. (2020). The shared socio-economic pathway (SSP) greenhouse gas concentrations and their extensions to 2500. *Geoscientific Model Development*, 13(8), 3571–3605. [doi:10.5194/gmd-13-3571-2020](https://doi.org/10.5194/gmd-13-3571-2020)
+
 ## AI-assisted development
 
 The conception, design, and coding of this game were substantially supported by large language models via the [Cursor](https://cursor.com) IDE, including Claude Opus 4.6 and Sonnet 4.6 (Anthropic), GPT-5.4 (OpenAI), and Cursor Composer 2. This assistance spanned the game engine logic, Firebase integration, UI rendering, CSS styling, solo-mode computer-simulated firm strategies, and documentation. All pedagogical design decisions, game mechanics, theoretical framing, and final implementation choices were directed by the human author, who reviewed, tested, and takes responsibility for all code and content in this repository.
