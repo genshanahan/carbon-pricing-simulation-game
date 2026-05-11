@@ -366,6 +366,7 @@ export function renderCO2Extra(ppm, config, prefix = '') {
 export function renderRoundHistory(regime, d, firms, config, playerFirmIndex = null) {
   /* Capital after the latest completed round, or starting capital if none. */
   const currentCapital = firms.map((_, fi) => {
+    if (d.firms?.[fi] && Number.isFinite(Number(d.firms[fi].capital))) return Number(d.firms[fi].capital);
     if (d.rounds.length === 0) return config.startCapital;
     const last = d.rounds[d.rounds.length - 1];
     return (last.capitalStart[fi] || 0) + (last.profitByFirm[fi] || 0);

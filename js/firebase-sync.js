@@ -7,6 +7,7 @@ import { FIREBASE_CONFIG } from './firebase-config.js';
 
 let db = null;
 let appInitialised = false;
+let authPromise = null;
 
 function ensureInit() {
   if (appInitialised) return;
@@ -14,6 +15,32 @@ function ensureInit() {
   firebase.initializeApp(FIREBASE_CONFIG);
   db = firebase.database();
   appInitialised = true;
+}
+
+async function ensureFacilitatorAuth() {
+  ensureInit();
+  if (typeof firebase.auth !== 'function') {
+    throw new Error('Firebase Authentication SDK is required for facilitator state writes.');
+  }
+  const auth = firebase.auth();
+  if (auth.currentUser) return auth.currentUser;
+  if (!authPromise) {
+    authPromise = new Promise((resolve, reject) => {
+      const unsubscribe = auth.onAuthStateChanged(async user => {
+        unsubscribe();
+        try {
+          if (user) resolve(user);
+          else {
+            const cred = await auth.signInAnonymously();
+            resolve(cred.user);
+          }
+        } catch (err) {
+          reject(err);
+        }
+      }, reject);
+    }).finally(() => { authPromise = null; });
+  }
+  return authPromise;
 }
 
 function roomRef(roomCode) {
@@ -25,19 +52,21 @@ function roomRef(roomCode) {
 
 export async function createRoom(roomCode, initialState) {
   ensureInit();
+  const facilitator = await ensureFacilitatorAuth();
   const ref = roomRef(roomCode);
   /* Use update (not set) on the room root so rules evaluate per child path.
      Rules that only allow `.write` on `state`, `meta`, etc. reject a parent
      `set()` that replaces the whole room object (PERMISSION_DENIED). */
   await ref.update({
+    'meta/createdAt': firebase.database.ServerValue.TIMESTAMP,
+    'meta/facilitatorUid': facilitator.uid,
+  });
+  await ref.update({
     state: initialState,
     submissions: {},
     debrief: {},
     cleantech: {},
-    meta: {
-      createdAt: firebase.database.ServerValue.TIMESTAMP,
-      facilitatorConnected: true,
-    },
+    'meta/facilitatorConnected': true,
   });
   ref.child('meta/facilitatorConnected').onDisconnect().set(false);
   return roomCode;
@@ -75,6 +104,7 @@ export async function clearNonStateData(roomCode) {
 /* ── State sync (facilitator writes, everyone reads) ── */
 
 export async function pushState(roomCode, state) {
+  await ensureFacilitatorAuth();
   await roomRef(roomCode).child('state').set(state);
 }
 

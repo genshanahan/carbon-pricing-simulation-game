@@ -131,6 +131,7 @@ let submissionErrors = {};
 let submissionClampNotes = {};
 let proposalSavedAt = {};
 let calcSimCleanTech = false;
+let tradeSuccessByRegime = {};
 
 const content = document.getElementById('content');
 
@@ -174,6 +175,26 @@ function buildClampMessage(regime, fd, config, raw, applied) {
   return `You entered ${fmt(raw)}; your submission was recorded as ${fmt(applied)} (limited by ${joint}).`;
 }
 
+function parseWholeNumberInput(raw) {
+  if (raw == null) return null;
+  const text = String(raw).trim();
+  if (!/^\d+$/.test(text)) return null;
+  return parseInt(text, 10);
+}
+
+function fmtPermitAmount(value) {
+  const n = Math.max(0, Number(value) || 0);
+  if (Math.abs(n - Math.round(n)) < 0.0001) return fmt(Math.round(n));
+  return n.toLocaleString('en-GB', {
+    minimumFractionDigits: n < 1 ? 2 : 1,
+    maximumFractionDigits: 2,
+  });
+}
+
+function fmtPermitUnits(value) {
+  return fmt(Math.max(0, Math.floor((Number(value) || 0) + 0.0001)));
+}
+
 /* ── Initialise game ── */
 
 function startGame() {
@@ -191,6 +212,7 @@ function startGame() {
   proposalSavedAt = {};
   submissionErrors = {};
   submissionClampNotes = {};
+  tradeSuccessByRegime = {};
   cleanTechDecisionMade = {};
   calcSimCleanTech = false;
   render();
@@ -422,9 +444,9 @@ function renderPermitInfo(regime, d, config) {
           const upp = unitsPerPermit(fd);
           return `<tr>
             <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
-            <td class="num">${fd.permits}</td>
+            <td class="num">${fmtPermitAmount(fd.permits)}</td>
             <td class="num">${fmt(upp)}</td>
-            <td class="num">${fmt(fd.permits * upp)}</td>
+            <td class="num">${fmtPermitUnits(fd.permits * upp)}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -450,7 +472,7 @@ function renderPlayerInput(regime, d, config) {
   if (isTrade) {
     const pr = permitsRemaining(fd);
     const upp = unitsPerPermit(fd);
-    constraints += ` | Permits remaining: ${fmt(pr)} (=${fmt(pr * upp)} units)`;
+    constraints += ` | Permits remaining: ${fmtPermitAmount(pr)} (=${fmtPermitUnits(pr * upp)} units)`;
   }
 
   return `<div class="submit-section">
@@ -635,6 +657,7 @@ function renderTradePanel(regime, d, config) {
   const trades = d.trades || [];
   const playerFd = d.firms[PLAYER_FIRM];
   const playerRemaining = permitsRemaining(playerFd);
+  const tradeSuccess = tradeSuccessByRegime[regime] || '';
 
   const holdingsRows = state.firms.map((f, i) => {
     const fd = d.firms[i];
@@ -655,8 +678,8 @@ function renderTradePanel(regime, d, config) {
     }
     return `<tr>
       <td style="color:${firmColor(i)};font-weight:600;">${escHtml(f.name)}${i === PLAYER_FIRM ? ' (You)' : ''}</td>
-      <td class="num">${fmt(fd.permits)}</td>
-      <td class="num">${fmt(pr)}</td>
+      <td class="num">${fmtPermitAmount(fd.permits)}</td>
+      <td class="num">${fmtPermitAmount(pr)}</td>
       <td class="num">${fmtMoney(fd.capital)}</td>
       <td>${marketRole}</td>
     </tr>`;
@@ -673,7 +696,7 @@ function renderTradePanel(regime, d, config) {
       <td>${ti + 1}</td>
       <td style="color:${firmColor(t.seller)};">${escHtml(state.firms[t.seller].name)}</td>
       <td style="color:${firmColor(t.buyer)};">${escHtml(state.firms[t.buyer].name)}</td>
-      <td class="num">${fmt(t.quantity)}</td>
+      <td class="num">${fmtPermitAmount(t.quantity)}</td>
       <td class="num">${fmtMoney(t.price)}</td>
     </tr>`).join('')}</tbody></table>
   </div>` : '';
@@ -726,7 +749,7 @@ function renderTradePanel(regime, d, config) {
         </div>
       </div>
       <div id="tradeError" class="form-error hidden" style="margin-bottom:0.5rem;"></div>
-      <div id="tradeSuccess" class="info-box success hidden" style="margin-bottom:0.5rem;"></div>
+      <div id="tradeSuccess" class="info-box success ${tradeSuccess ? '' : 'hidden'}" style="margin-bottom:0.5rem;">${escHtml(tradeSuccess)}</div>
       <button class="btn btn-success" onclick="window.soloApp.proposeTrade('${regime}')">Propose Trade</button>
     </div>
     ${tradeLog}
@@ -754,7 +777,7 @@ function renderCompetitorCard(regime, d, config) {
     let permitBit = '';
     if (usesPermits) {
       const pr = permitsRemaining(fd);
-      permitBit = `<span class="competitor-stat"><span class="competitor-stat-label">Permits left</span><span class="competitor-stat-value">${fmt(pr)}</span></span>`;
+      permitBit = `<span class="competitor-stat"><span class="competitor-stat-label">Permits left</span><span class="competitor-stat-value">${fmtPermitAmount(pr)}</span></span>`;
     }
 
     let roleBit = '';
@@ -1178,13 +1201,13 @@ window.soloApp = {
     if (!input) return;
     const roundKey = `${regime}_${d.currentRound}`;
 
+    const parsed = parseWholeNumberInput(input.value);
     if (input.value.trim() === '') {
       submissionErrors[roundKey] = 'Please enter a production decision before submitting.';
       render();
       return;
     }
-    const parsed = parseInt(input.value, 10);
-    if (isNaN(parsed) || parsed < 0) {
+    if (parsed == null) {
       submissionErrors[roundKey] = 'Enter a whole non-negative number.';
       render();
       return;
@@ -1206,6 +1229,7 @@ window.soloApp = {
     }
 
     processRound(state, regime, production);
+    delete tradeSuccessByRegime[regime];
 
     if (regime === 'trademarket') {
       executeAiTrades(state, regime, PLAYER_FIRM);
@@ -1225,10 +1249,10 @@ window.soloApp = {
 
     const direction = document.getElementById('tradeDirection')?.value;
     const partner = parseInt(document.getElementById('tradePartner')?.value, 10);
-    const qty = parseInt(document.getElementById('tradeQty')?.value, 10);
+    const qty = parseWholeNumberInput(document.getElementById('tradeQty')?.value);
     const price = parseFloat(document.getElementById('tradePrice')?.value);
 
-    if (isNaN(partner) || isNaN(qty) || qty <= 0 || isNaN(price) || price < 0) {
+    if (isNaN(partner) || qty == null || qty <= 0 || isNaN(price) || price < 0) {
       if (errEl) { errEl.textContent = 'Please fill in all trade fields with valid values.'; errEl.classList.remove('hidden'); }
       return;
     }
@@ -1257,9 +1281,11 @@ window.soloApp = {
 
     if (successEl) {
       const verb = direction === 'buy' ? 'Bought' : 'Sold';
-      successEl.textContent = `${verb} ${qty} permit(s) at $${price} each with ${state.firms[partner].name}.`;
+      successEl.textContent = `${verb} ${fmtPermitAmount(qty)} permit(s) at $${price} each with ${state.firms[partner].name}.`;
       successEl.classList.remove('hidden');
     }
+    const verb = direction === 'buy' ? 'Bought' : 'Sold';
+    tradeSuccessByRegime[regime] = `${verb} ${fmtPermitAmount(qty)} permit(s) at $${price} each with ${state.firms[partner].name}.`;
     render();
   },
 

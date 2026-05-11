@@ -48,7 +48,7 @@ The primary mode. A facilitator projects the host view on a classroom screen; st
 
 **Class size (facilitated mode):** **4–6 firms** (of 1–3 students each). The facilitator chooses the firm count when configuring the session before play begins; this range is fixed so calibration holds — emissions stay within safe bounds under quantity regimes and the intended economic ordering across regimes is preserved. Each regime runs for 5 rounds (fixed).
 
-**Self-hosting:** If you want to run your own independent instance, you can fork the repository and set up your own Firebase project. See **[SETUP.md](SETUP.md)** for instructions.
+**Self-hosting:** If you want to run your own independent instance, you can fork the repository and set up your own Firebase project with Realtime Database and Anonymous Authentication. See **[SETUP.md](SETUP.md)** for instructions.
 
 ### Solo mode (self-study)
 
@@ -63,8 +63,8 @@ Open **[solo.html](https://genshanahan.github.io/carbon-pricing-simulation-game/
 This game combines, adapts and extends three prior educational simulations:
 
 - **The Thingamabob Game** — Bigelow, B. (2015). The Thingamabob Game: A simulation on capitalism vs. the climate. In B. Bigelow & T. Swinehart (Eds.), *A people's curriculum for the earth: Teaching climate change and the environmental crisis*. Milwaukee, WI: Rethinking Schools. [PDF](https://hrwstf.org/wp-content/uploads/2025/08/thingamabob-game-capitalism-climate.pdf)
-- **The Carbon Emissions Game** — Sethi, G. (2017). The Carbon Emissions Game. SERC InTeGrate. [Link](https://serc.carleton.edu/integrate/teaching_materials/carbon_emissions/unit6.html)
-- **The Pollution Game** — Corrigan, J. R. (2011). The Pollution Game: A classroom game demonstrating the relative effectiveness of emissions taxes and tradable permits. *The Journal of Economic Education*, 42(1), 70–78. [doi:10.1080/00220485.2011.536491](https://doi.org/10.1080/00220485.2011.536491) 
+- **The Carbon Emissions Game** — Sethi, G. (2017). The Carbon Emissions Game. SERC InTeGrate. [SERC teaching material](https://serc.carleton.edu/integrate/teaching_materials/carbon_emissions/unit6.html)
+- **The Pollution Game** — Corrigan, J. R. (2011). The Pollution Game: A classroom game demonstrating the relative effectiveness of emissions taxes and tradable permits. *The Journal of Economic Education*, 42(1), 70–78. [doi:10.1080/00220485.2011.536491](https://doi.org/10.1080/00220485.2011.536491)
 
 The first regime is a straightforward implementation of **The Thingamabob Game**, which gives students a simulated experience of the profit motive and how, without some form of regulation, profit maximization irrationally but irresistably drives catastrophic emissions. A simplified form of **The Carbon Emissions Game** (itself adapted from **The Pollution Game**) then walks students through the main forms of regulation designed to address this problem, again using the in-game competiton to simulate the structural dynamics of each approach. The simplification primarily entails stripping out detail regarding continuous marginal abatement cost curves in favour of a binary clean-technology toggle, keeping the arithmetic accessible to students without economics training while preserving the structural dynamics of each regulatory regime.
 

@@ -41,26 +41,43 @@ If you want to run your own independent instance — for example, to customise t
 1. In the Firebase console, go to **Build > Realtime Database**
 2. Click **Create Database**
 3. Choose your preferred region, then select **Start in test mode** (for development)
-4. For production use, replace the default rules with:
+4. In the Firebase console, go to **Build > Authentication > Sign-in method** and enable **Anonymous** sign-in. The app uses this only to identify the browser that created a facilitated room as the facilitator.
+5. For production use, replace the default database rules with:
 
 ```json
 {
   "rules": {
     "rooms": {
       "$roomId": {
-        ".read": true,
-        "state": { ".write": true },
-        "submissions": { ".write": true },
-        "debrief": { ".write": true },
-        "cleantech": { ".write": true },
-        "meta": { ".write": true }
+        "state": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('meta').child('facilitatorUid').val()"
+        },
+        "submissions": { ".read": true, ".write": true },
+        "debrief": { ".read": true, ".write": true },
+        "cleantech": { ".read": true, ".write": true },
+        "meta": {
+          ".read": true,
+          "createdAt": {
+            ".write": "!data.exists() && auth != null"
+          },
+          "facilitatorUid": {
+            ".write": "!data.exists() && auth != null && newData.val() === auth.uid"
+          },
+          "facilitatorConnected": {
+            ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('meta').child('facilitatorUid').val()"
+          },
+          "students": {
+            "$firmId": { ".write": true }
+          }
+        }
       }
     }
   }
 }
 ```
 
-**Troubleshooting `PERMISSION_DENIED` when creating a room:** Rules must allow `.write` on each of `state`, `submissions`, `debrief`, `cleantech`, and `meta` (see above). The app uses `update()` so those child rules apply; a parent-only `set()` on the whole room would also require `.write` on `$roomId` itself. Ensure `cleantech` is present if you added clean-tech claiming after an older rules deploy.
+**Troubleshooting `PERMISSION_DENIED` when creating a room:** Confirm Anonymous Authentication is enabled and that the rules above are deployed. The app creates `meta/facilitatorUid` first, then writes `state`; subsequent state writes are accepted only from the same anonymous Firebase user. Ensure `cleantech` is present if you added clean-tech claiming after an older rules deploy.
 
 ### 3. Add your Firebase config
 
@@ -99,13 +116,13 @@ Run a local web server from the project root (the folder containing `index.html`
 python3 -m http.server 8000
 ```
 
-Then open **http://localhost:8000** in a browser. Stop the server with **Ctrl+C**.
+Then open [http://localhost:8000](http://localhost:8000) in a browser. Stop the server with **Ctrl+C**.
 
 ---
 
 ## Troubleshooting
 
-**Facilitator page stuck on "Loading…"**
+### Facilitator page stuck on "Loading…"
 
 - Create the room from **Create Game Room** on the landing page each time; opening `host.html?room=...` manually only works if that room already exists in Firebase under `rooms/<code>/state`.
 - If you are running a forked instance, open **Realtime Database > Data** in the Firebase console and confirm `rooms > <your code> > state` exists.
@@ -113,7 +130,7 @@ Then open **http://localhost:8000** in a browser. Stop the server with **Ctrl+C*
 
 ## File structure
 
-```
+```text
 carbon-pricing-simulation-game/
 ├── index.html              Landing page (create room / join / solo link)
 ├── host.html               Facilitator view (projected on classroom screen)

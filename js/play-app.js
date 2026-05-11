@@ -31,6 +31,8 @@ let hasProposed = {};
 let submissionErrors = {};
 let submissionRecentlySaved = {};
 let isConnected = true;
+let loadError = '';
+let lastRoundByRegime = {};
 
 /** RTDB `cleantech/{regime}` snapshot (students listen here; host also mirrors into `state`). */
 const cleantechRemoteByRegime = {};
@@ -177,16 +179,29 @@ async function init() {
   onStateChange(ROOM, newState => {
     state = normalizeStateFromRemote(newState);
     if (!state) {
+      loadError = 'room-not-found';
       syncCleanTechStudentListener();
-      content.innerHTML = `<div class="card"><h2>Room not found</h2><p>No game state for this room. <a href="index.html">Return to join page</a></p></div>`;
+      render();
+      return;
     } else if (FIRM_ID < 0 || FIRM_ID >= state.config.numFirms) {
       const nf = state.config.numFirms;
       state = null;
-      content.innerHTML = `<div class="card"><h2>Invalid firm</h2><p>Firm ${FIRM_ID} does not exist in this game (${nf} firms configured). <a href="index.html">Return to join page</a></p></div>`;
+      loadError = `invalid-firm:${nf}`;
+      render();
       return;
     }
+    loadError = '';
     state.config = buildConfig(state.config);
     const rd = state.regimeData[state.regime];
+    if (rd) {
+      const prevRound = lastRoundByRegime[state.regime];
+      if (typeof prevRound === 'number' && rd.currentRound < prevRound) {
+        const rewoundKey = `${state.regime}_${rd.currentRound}`;
+        delete hasSubmitted[rewoundKey];
+        delete submissionRecentlySaved[rewoundKey];
+      }
+      lastRoundByRegime[state.regime] = rd.currentRound;
+    }
     console.log(`[STUDENT] onStateChange: regime=${state.regime}, currentRound=${rd ? rd.currentRound : 'N/A'}`);
     syncCleanTechStudentListener();
     render();
@@ -196,6 +211,13 @@ async function init() {
 /* ── Render ── */
 
 function render() {
+  if (loadError) {
+    const invalidMatch = loadError.match(/^invalid-firm:(\d+)$/);
+    content.innerHTML = invalidMatch
+      ? `<div class="card"><h2>Invalid firm</h2><p>Firm ${FIRM_ID} does not exist in this game (${invalidMatch[1]} firms configured). <a href="index.html">Return to join page</a></p></div>`
+      : `<div class="card"><h2>Room not found</h2><p>No game state for this room. <a href="index.html">Return to join page</a></p></div>`;
+    return;
+  }
   if (!state) {
     content.innerHTML = '<div class="waiting-indicator"><div class="spinner"></div><p>Connecting to game…</p></div>';
     return;
@@ -298,7 +320,8 @@ function renderRegime(regime) {
     html += renderCleanTechClaimCard(regime, d, fdEff, config);
 
     const roundKey = `${regime}_${d.currentRound}`;
-    const alreadySubmitted = hasSubmitted[roundKey];
+    const alreadySubmitted = Object.prototype.hasOwnProperty.call(hasSubmitted, roundKey);
+    const submittedQty = hasSubmitted[roundKey];
     const maxAllowed = maxAllowedProduction(fdEff, config, regime);
     const clampNote = submissionClampNotes[roundKey] || '';
     const submissionError = submissionErrors[roundKey] || '';
@@ -309,7 +332,7 @@ function renderRegime(regime) {
         <div class="submit-section${animateClass}" style="border-color:var(--success);">
           <h3 style="color:var(--success);">Decision submitted!</h3>
           <p style="font-size:0.88rem;color:var(--text-secondary);">
-            You submitted <strong>${fmt(alreadySubmitted)}</strong> thingamabobs for Round ${d.currentRound + 1}.
+            You submitted <strong>${fmt(submittedQty)}</strong> thingamabobs for Round ${d.currentRound + 1}.
             Waiting for the facilitator to process…
           </p>
           ${clampNote ? `<p style="font-size:0.82rem;color:var(--warn);margin-top:0.5rem;">${clampNote}</p>` : ''}

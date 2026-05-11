@@ -209,8 +209,7 @@ function genuineSurplusPermits(firmData, config, roundsRemaining) {
  *
  * Uses forward-looking surplus: AI firms only sell permits they genuinely
  * won't use in remaining rounds, ensuring trades create real efficiency
- * gains. Fractional permits may be traded (matching the precision of the
- * surplus calculation).
+ * gains. Trades are kept to whole permits to match the player-facing market.
  *
  * Returns an array of { seller, buyer, quantity, price } for logging.
  */
@@ -232,8 +231,8 @@ export function executeAiTrades(state, regime, playerFirmIndex) {
       if (i === playerFirmIndex) continue;
       const fd = d.firms[i];
       const surplus = genuineSurplusPermits(fd, config, roundsRemaining);
-      if (surplus >= 0.1) {
-        sellers.push({ index: i, surplus });
+      if (surplus >= 1) {
+        sellers.push({ index: i, surplus: Math.floor(surplus) });
       } else {
         const rem = permitsRemaining(fd);
         const res = aiReservationPrice(i, fd, config, regime);
@@ -250,9 +249,9 @@ export function executeAiTrades(state, regime, playerFirmIndex) {
     for (const buyer of buyers) {
       if (sellers.length === 0) break;
       const seller = sellers[0];
-      if (seller.surplus < 0.1) { sellers.shift(); continue; }
+      if (seller.surplus < 1) { sellers.shift(); continue; }
 
-      const qty = Math.round(Math.min(seller.surplus, 1) * 10) / 10;
+      const qty = Math.min(seller.surplus, 1);
       const pricePerPermit = Math.round(buyer.reservation / 2);
       const totalCost = Math.round(qty * pricePerPermit);
       if (d.firms[buyer.index].capital < totalCost) continue;
@@ -262,7 +261,7 @@ export function executeAiTrades(state, regime, playerFirmIndex) {
 
       trades.push({ seller: seller.index, buyer: buyer.index, quantity: qty, price: pricePerPermit });
       seller.surplus -= qty;
-      if (seller.surplus < 0.1) sellers.shift();
+      if (seller.surplus < 1) sellers.shift();
       changed = true;
       break;
     }
